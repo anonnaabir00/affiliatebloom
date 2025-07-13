@@ -66,6 +66,11 @@ class Frontend {
                  '</div>';
       }
 
+      // Get current user's affiliate balance
+      $affiliate_balance = get_user_meta($user_id, 'affiliate_balance', true);
+      $affiliate_balance = !empty($affiliate_balance) ? floatval($affiliate_balance) : 0;
+      $formatted_balance = '$' . number_format($affiliate_balance, 2);
+
       ob_start();
       ?>
       <div class="affiliate-bloom-dashboard">
@@ -88,7 +93,7 @@ class Frontend {
                   <div class="stat-label"><?php _e('Conversion Rate', 'affiliate-bloom'); ?></div>
               </div>
               <div class="stat-card">
-                  <div class="stat-number" id="total-earnings">$0</div>
+                  <div class="stat-number" id="total-earnings"><?php echo esc_html($formatted_balance); ?></div>
                   <div class="stat-label"><?php _e('Total Earnings', 'affiliate-bloom'); ?></div>
               </div>
           </div>

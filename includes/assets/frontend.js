@@ -1,527 +1,357 @@
 jQuery(document).ready(function($) {
 
-    // Global variables
-    let currentPage = 1;
-    let performanceChart = null;
+    // Test AJAX connection
+    function testAjax() {
+        $.ajax({
+            url: affiliate_bloom_ajax.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'affiliate_bloom_test',
+                nonce: affiliate_bloom_ajax.nonce
+            },
+            success: function(response) {
+                console.log('AJAX Test:', response);
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX Test Error:', error);
+            }
+        });
+    }
 
-    // Generate affiliate link
-    $(document).on('click', '#generate-affiliate-link', function(e) {
+    // Test on page load
+    testAjax();
+
+    // Load dashboard stats on page load
+    if ($('.affiliate-bloom-dashboard').length) {
+        loadDashboardStats();
+        loadAffiliateLinks();
+    }
+
+    // Generate affiliate link from dashboard
+    $('#generate-affiliate-link').on('click', function(e) {
         e.preventDefault();
 
-        if (!affiliateBloom.is_affiliate) {
-            showNotification('You are not an approved affiliate.', 'error');
+        const productUrl = $('#product-url').val().trim();
+        if (!productUrl) {
+            alert('Please enter a product URL');
             return;
         }
 
-        var productId = $(this).data('product-id');
-        var button = $(this);
-        var originalText = button.text();
-
-        button.prop('disabled', true).text(affiliateBloom.messages.generating);
+        const button = $(this);
+        const originalText = button.text();
+        button.text('Generating...').prop('disabled', true);
 
         $.ajax({
-            url: affiliateBloom.ajax_url,
+            url: affiliate_bloom_ajax.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'generate_affiliate_link',
+                product_url: productUrl,
+                nonce: affiliate_bloom_ajax.nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    $('#generated-link').val(response.data.affiliate_url);
+                    $('#generated-link-result').slideDown();
+                    $('#product-url').val('');
+
+                    // Refresh links
+                    loadAffiliateLinks();
+
+                    // Show success message
+                    showNotification('Affiliate link generated successfully!', 'success');
+                } else {
+                    showNotification('Error: ' + response.data, 'error');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', error);
+                showNotification('Failed to generate link. Please try again.', 'error');
+            },
+            complete: function() {
+                button.text(originalText).prop('disabled', false);
+            }
+        });
+    });
+
+    // Generate affiliate link from shortcode
+    $('.generate-link-btn').on('click', function(e) {
+        e.preventDefault();
+
+        const button = $(this);
+        const productId = button.data('product-id');
+        const originalText = button.text();
+        const resultDiv = button.siblings('.generated-link-result');
+
+        button.text('Generating...').prop('disabled', true);
+
+        $.ajax({
+            url: affiliate_bloom_ajax.ajax_url,
             type: 'POST',
             data: {
                 action: 'generate_affiliate_link',
                 product_id: productId,
-                nonce: affiliateBloom.nonce
+                nonce: affiliate_bloom_ajax.nonce
             },
             success: function(response) {
                 if (response.success) {
-                    $('#affiliate-url').val(response.data.affiliate_url);
-                    $('#affiliate-result').slideDown();
-                    button.text(affiliateBloom.messages.generated).addClass('success');
-
-                    // Update share buttons
-                    updateShareButtons(response.data.affiliate_url);
-
-                    showNotification(response.data.message, 'success');
+                    resultDiv.find('.generated-link').val(response.data.affiliate_url);
+                    resultDiv.slideDown();
+                    showNotification('Affiliate link generated successfully!', 'success');
                 } else {
                     showNotification('Error: ' + response.data, 'error');
-                    button.prop('disabled', false).text(originalText);
                 }
             },
-            error: function() {
-                showNotification(affiliateBloom.messages.error, 'error');
-                button.prop('disabled', false).text(originalText);
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', error);
+                showNotification('Failed to generate link. Please try again.', 'error');
+            },
+            complete: function() {
+                button.text(originalText).prop('disabled', false);
             }
         });
     });
 
-    // Copy affiliate link to clipboard
-    $(document).on('click', '#copy-affiliate-link, .copy-link-btn', function(e) {
+    // Copy link to clipboard
+    $(document).on('click', '#copy-link, .copy-link-btn', function(e) {
         e.preventDefault();
 
-        var url;
-        if ($(this).hasClass('copy-link-btn')) {
-            url = $(this).data('url');
-        } else {
-            url = $('#affiliate-url').val();
-        }
+        const linkInput = $(this).siblings('input[type="text"]').length ?
+            $(this).siblings('input[type="text"]') :
+            $(this).closest('.link-result').find('input[type="text"]');
 
-        if (!url) {
-            showNotification('No URL to copy', 'error');
-            return;
-        }
+        if (linkInput.length) {
+            linkInput.select();
+            document.execCommand('copy');
 
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(url).then(function() {
-                showCopySuccess($(e.target));
-            }).catch(function() {
-                fallbackCopyTextToClipboard(url, $(e.target));
-            });
-        } else {
-            fallbackCopyTextToClipboard(url, $(e.target));
+            const button = $(this);
+            const originalText = button.text();
+            button.text('Copied!');
+
+            setTimeout(function() {
+                button.text(originalText);
+            }, 2000);
+
+            showNotification('Link copied to clipboard!', 'success');
         }
     });
 
-    // Fallback copy function for older browsers
-    function fallbackCopyTextToClipboard(text, button) {
-        var textArea = document.createElement("textarea");
-        textArea.value = text;
-        textArea.style.top = "0";
-        textArea.style.left = "0";
-        textArea.style.position = "fixed";
+    // Refresh links
+    $('#refresh-links').on('click', function(e) {
+        e.preventDefault();
+        loadAffiliateLinks();
+    });
 
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
+    // Load dashboard stats
+    function loadDashboardStats() {
+        $.ajax({
+            url: affiliate_bloom_ajax.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'get_affiliate_stats',
+                nonce: affiliate_bloom_ajax.nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    const stats = response.data.stats;
 
-        try {
-            var successful = document.execCommand('copy');
-            if (successful) {
-                showCopySuccess(button);
-            } else {
-                showNotification('Failed to copy link', 'error');
+                    $('#total-clicks').text(stats.total_clicks);
+                    $('#total-conversions').text(stats.total_conversions);
+                    $('#conversion-rate').text(stats.conversion_rate + '%');
+                    $('#total-earnings').text('$' + parseFloat(stats.total_earnings).toFixed(2));
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Stats Error:', error);
             }
-        } catch (err) {
-            showNotification('Failed to copy link', 'error');
-        }
-
-        document.body.removeChild(textArea);
-    }
-
-    function showCopySuccess(button) {
-        var originalText = button.text();
-        var originalTitle = button.attr('title');
-
-        button.text(affiliateBloom.messages.copied)
-            .addClass('success')
-            .attr('title', affiliateBloom.messages.copied);
-
-        setTimeout(function() {
-            button.text(originalText)
-                .removeClass('success')
-                .attr('title', originalTitle);
-        }, 2000);
-    }
-
-    // Social sharing
-    $(document).on('click', '.affiliate-share-btn', function(e) {
-        e.preventDefault();
-
-        var platform = $(this).data('platform');
-        var url = $('#affiliate-url').val();
-        var productTitle = $('h1.product_title').text() || 'Check out this amazing product!';
-
-        if (!url) {
-            showNotification('Please generate an affiliate link first', 'error');
-            return;
-        }
-
-        var shareUrl = '';
-        var windowOptions = 'width=600,height=400,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no,directories=no,status=no';
-
-        switch(platform) {
-            case 'facebook':
-                shareUrl = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url);
-                break;
-            case 'twitter':
-                shareUrl = 'https://twitter.com/intent/tweet?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(productTitle);
-                break;
-            case 'whatsapp':
-                shareUrl = 'https://wa.me/?text=' + encodeURIComponent(productTitle + ' ' + url);
-                break;
-            case 'linkedin':
-                shareUrl = 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(url);
-                break;
-            case 'telegram':
-                shareUrl = 'https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(productTitle);
-                break;
-        }
-
-        if (shareUrl) {
-            window.open(shareUrl, 'share', windowOptions);
-        }
-    });
-
-    function updateShareButtons(url) {
-        $('.affiliate-share-btn').each(function() {
-            $(this).data('url', url);
         });
     }
-
-    // Dashboard tabs
-    $(document).on('click', '.affiliate-tab-button', function(e) {
-        e.preventDefault();
-
-        var tabId = $(this).data('tab');
-
-        // Update active states
-        $('.affiliate-tab-button').removeClass('active');
-        $(this).addClass('active');
-
-        $('.affiliate-tab-panel').removeClass('active');
-        $('#tab-' + tabId).addClass('active');
-
-        // Load content for specific tabs
-        if (tabId === 'performance' && !performanceChart) {
-            loadPerformanceChart();
-        } else if (tabId === 'links') {
-            // Auto-load links when tab is opened
-            if ($('#affiliate-links-container').children().length <= 1) {
-                loadAffiliateLinks(1);
-            }
-        }
-    });
 
     // Load affiliate links
-    $(document).on('click', '#load-affiliate-links', function(e) {
-        e.preventDefault();
-        loadAffiliateLinks(1);
-    });
+    function loadAffiliateLinks(page = 1) {
+        const container = $('#links-container');
 
-    // Pagination for affiliate links
-    $(document).on('click', '.affiliate-pagination-btn', function(e) {
-        e.preventDefault();
-        var page = $(this).data('page');
-        loadAffiliateLinks(page);
-    });
-
-    function loadAffiliateLinks(page) {
-        var container = $('#affiliate-links-container');
-        var button = $('#load-affiliate-links');
-
-        button.prop('disabled', true).text(affiliateBloom.messages.loading);
-        container.addClass('loading');
+        // Show loading
+        container.html('<div class="loading-spinner"><div class="spinner"></div><p>Loading your links...</p></div>');
 
         $.ajax({
-            url: affiliateBloom.ajax_url,
+            url: affiliate_bloom_ajax.ajax_url,
             type: 'POST',
             data: {
                 action: 'get_user_affiliate_links',
                 page: page,
-                nonce: affiliateBloom.nonce
+                nonce: affiliate_bloom_ajax.nonce
             },
             success: function(response) {
                 if (response.success) {
-                    displayAffiliateLinks(response.data.links);
-                    displayPagination(response.data.current_page, response.data.total_pages);
-                    currentPage = response.data.current_page;
+                    const data = response.data;
 
-                    if (response.data.links.length === 0) {
-                        container.html('<div class="affiliate-no-links"><p>' + affiliateBloom.messages.no_links + '</p></div>');
+                    if (data.links.length === 0) {
+                        container.html('<div class="no-links"><p>No affiliate links found. Generate your first link above!</p></div>');
+                        return;
                     }
+
+                    let html = '<div class="links-table">';
+                    html += '<div class="links-header">';
+                    html += '<div class="link-col">Link</div>';
+                    html += '<div class="stats-col">Clicks</div>';
+                    html += '<div class="stats-col">Conversions</div>';
+                    html += '<div class="stats-col">Rate</div>';
+                    html += '<div class="date-col">Created</div>';
+                    html += '<div class="actions-col">Actions</div>';
+                    html += '</div>';
+
+                    data.links.forEach(function(link) {
+                        html += '<div class="link-row">';
+                        html += '<div class="link-col">';
+                        html += '<div class="link-url">' + truncateUrl(link.product_url || 'Product ID: ' + link.product_id) + '</div>';
+                        html += '<div class="affiliate-url">' + link.affiliate_url + '</div>';
+                        html += '</div>';
+                        html += '<div class="stats-col">' + link.clicks + '</div>';
+                        html += '<div class="stats-col">' + link.conversions + '</div>';
+                        html += '<div class="stats-col">' + link.conversion_rate + '%</div>';
+                        html += '<div class="date-col">' + formatDate(link.created_date) + '</div>';
+                        html += '<div class="actions-col">';
+                        html += '<button class="copy-link-action" data-url="' + link.affiliate_url + '">Copy</button>';
+                        html += '<button class="delete-link-action" data-id="' + link.id + '">Delete</button>';
+                        html += '</div>';
+                        html += '</div>';
+                    });
+
+                    html += '</div>';
+                    container.html(html);
+
+                    // Update pagination
+                    updatePagination(data.current_page, data.total_pages);
                 } else {
-                    showNotification('Error loading links: ' + response.data, 'error');
+                    container.html('<div class="error"><p>Error loading links: ' + response.data + '</p></div>');
                 }
             },
-            error: function() {
-                showNotification(affiliateBloom.messages.error, 'error');
-            },
-            complete: function() {
-                button.prop('disabled', false).text('Refresh Links');
-                container.removeClass('loading');
+            error: function(xhr, status, error) {
+                console.error('Links Error:', error);
+                container.html('<div class="error"><p>Failed to load links. Please try again.</p></div>');
             }
         });
     }
 
-    function displayAffiliateLinks(links) {
-        var container = $('#affiliate-links-container');
-        var html = '';
-
-        if (links.length > 0) {
-            html += '<div class="affiliate-links-grid">';
-
-            links.forEach(function(link) {
-                html += `
-                  <div class="affiliate-link-card" data-link-id="${link.id}">
-                      <div class="affiliate-link-header">
-                          <h4>${escapeHtml(link.product_name)}</h4>
-                          <div class="affiliate-link-actions">
-                              <button class="copy-link-btn" data-url="${link.affiliate_url}" title="Copy Link">📋</button>
-                              <button class="delete-link-btn" data-link-id="${link.id}" title="Delete Link">🗑️</button>
-                          </div>
-                      </div>
-                      
-                      <div class="affiliate-link-url">
-                          <input type="text" value="${link.affiliate_url}" readonly>
-                      </div>
-                      
-                      <div class="affiliate-link-stats">
-                          <div class="stat-item">
-                              <span class="stat-label">Clicks:</span>
-                              <span class="stat-value">${link.clicks}</span>
-                          </div>
-                          <div class="stat-item">
-                              <span class="stat-label">Conversions:</span>
-                              <span class="stat-value">${link.conversions}</span>
-                          </div>
-                          <div class="stat-item">
-                              <span class="stat-label">Rate:</span>
-                              <span class="stat-value">${link.conversion_rate}%</span>
-                          </div>
-                      </div>
-                      
-                      <div class="affiliate-link-date">
-                          Created: ${formatDate(link.created_date)}
-                      </div>
-                  </div>
-              `;
-            });
-
-            html += '</div>';
-        } else {
-            html = '<div class="affiliate-no-links"><p>' + affiliateBloom.messages.no_links + '</p></div>';
-        }
-
-        container.html(html);
-    }
-
-    function displayPagination(currentPage, totalPages) {
-        var container = $('#affiliate-links-pagination');
-        var html = '';
-
-        if (totalPages > 1) {
-            html += '<div class="affiliate-pagination">';
-
-            // Previous button
-            if (currentPage > 1) {
-                html += `<button class="affiliate-pagination-btn" data-page="${currentPage - 1}">← Previous</button>`;
-            }
-
-            // Page numbers
-            for (let i = 1; i <= totalPages; i++) {
-                if (i === currentPage) {
-                    html += `<span class="affiliate-pagination-current">${i}</span>`;
-                } else {
-                    html += `<button class="affiliate-pagination-btn" data-page="${i}">${i}</button>`;
-                }
-            }
-
-            // Next button
-            if (currentPage < totalPages) {
-                html += `<button class="affiliate-pagination-btn" data-page="${currentPage + 1}">Next →</button>`;
-            }
-
-            html += '</div>';
-        }
-
-        container.html(html);
-    }
-
-    // Delete affiliate link
-    $(document).on('click', '.delete-link-btn', function(e) {
+    // Copy link from table
+    $(document).on('click', '.copy-link-action', function(e) {
         e.preventDefault();
 
-        if (!confirm(affiliateBloom.messages.confirm_delete)) {
+        const url = $(this).data('url');
+        const button = $(this);
+        const originalText = button.text();
+
+        // Create temporary input
+        const temp = $('<input>');
+        $('body').append(temp);
+        temp.val(url).select();
+        document.execCommand('copy');
+        temp.remove();
+
+        button.text('Copied!');
+        setTimeout(function() {
+            button.text(originalText);
+        }, 2000);
+
+        showNotification('Link copied to clipboard!', 'success');
+    });
+
+    // Delete link
+    $(document).on('click', '.delete-link-action', function(e) {
+        e.preventDefault();
+
+        if (!confirm('Are you sure you want to delete this link?')) {
             return;
         }
 
-        var linkId = $(this).data('link-id');
-        var linkCard = $(this).closest('.affiliate-link-card');
+        const linkId = $(this).data('id');
+        const button = $(this);
+        const originalText = button.text();
+
+        button.text('Deleting...').prop('disabled', true);
 
         $.ajax({
-            url: affiliateBloom.ajax_url,
+            url: affiliate_bloom_ajax.ajax_url,
             type: 'POST',
             data: {
                 action: 'delete_affiliate_link',
                 link_id: linkId,
-                nonce: affiliateBloom.nonce
+                nonce: affiliate_bloom_ajax.nonce
             },
             success: function(response) {
                 if (response.success) {
-                    linkCard.fadeOut(300, function() {
-                        $(this).remove();
-
-                        // Check if no more links
-                        if ($('.affiliate-link-card').length === 0) {
-                            $('#affiliate-links-container').html('<div class="affiliate-no-links"><p>' + affiliateBloom.messages.no_links + '</p></div>');
-                        }
-                    });
-
-                    showNotification(affiliateBloom.messages.deleted, 'success');
+                    loadAffiliateLinks();
+                    showNotification('Link deleted successfully!', 'success');
                 } else {
                     showNotification('Error: ' + response.data, 'error');
                 }
             },
-            error: function() {
-                showNotification(affiliateBloom.messages.error, 'error');
+            error: function(xhr, status, error) {
+                console.error('Delete Error:', error);
+                showNotification('Failed to delete link. Please try again.', 'error');
+            },
+            complete: function() {
+                button.text(originalText).prop('disabled', false);
             }
         });
     });
 
-    // Load performance chart
-    function loadPerformanceChart() {
-        $.ajax({
-            url: affiliateBloom.ajax_url,
-            type: 'POST',
-            data: {
-                action: 'get_affiliate_stats',
-                nonce: affiliateBloom.nonce
-            },
-            success: function(response) {
-                if (response.success && response.data.monthly_stats) {
-                    createPerformanceChart(response.data.monthly_stats);
-                }
-            },
-            error: function() {
-                console.log('Failed to load performance data');
-            }
-        });
-    }
+    // Pagination
+    function updatePagination(currentPage, totalPages) {
+        const container = $('#links-pagination');
 
-    function createPerformanceChart(monthlyData) {
-        var ctx = document.getElementById('affiliate-performance-chart');
-        if (!ctx) return;
-
-        // Destroy existing chart if it exists
-        if (performanceChart) {
-            performanceChart.destroy();
+        if (totalPages <= 1) {
+            container.empty();
+            return;
         }
 
-        var labels = monthlyData.map(function(item) {
-            return new Date(item.month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        });
+        let html = '<div class="pagination">';
 
-        var clicksData = monthlyData.map(function(item) {
-            return item.clicks;
-        });
-
-        var conversionsData = monthlyData.map(function(item) {
-            return item.conversions;
-        });
-
-        // Simple chart implementation (you can replace with Chart.js if available)
-        var canvas = ctx.getContext('2d');
-        var width = ctx.width;
-        var height = ctx.height;
-
-        // Clear canvas
-        canvas.clearRect(0, 0, width, height);
-
-        // Draw simple line chart
-        drawSimpleChart(canvas, width, height, labels, clicksData, conversionsData);
-    }
-
-    function drawSimpleChart(ctx, width, height, labels, clicksData, conversionsData) {
-        var padding = 40;
-        var chartWidth = width - (padding * 2);
-        var chartHeight = height - (padding * 2);
-
-        // Find max values
-        var maxClicks = Math.max(...clicksData, 1);
-        var maxConversions = Math.max(...conversionsData, 1);
-        var maxValue = Math.max(maxClicks, maxConversions);
-
-        // Draw axes
-        ctx.strokeStyle = '#ddd';
-        ctx.lineWidth = 1;
-
-        // Y-axis
-        ctx.beginPath();
-        ctx.moveTo(padding, padding);
-        ctx.lineTo(padding, height - padding);
-        ctx.stroke();
-
-        // X-axis
-        ctx.beginPath();
-        ctx.moveTo(padding, height - padding);
-        ctx.lineTo(width - padding, height - padding);
-        ctx.stroke();
-
-        // Draw data points and lines
-        if (labels.length > 1) {
-            var stepX = chartWidth / (labels.length - 1);
-
-            // Draw clicks line
-            ctx.strokeStyle = '#3498db';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-
-            for (let i = 0; i < clicksData.length; i++) {
-                var x = padding + (i * stepX);
-                var y = height - padding - (clicksData[i] / maxValue * chartHeight);
-
-                if (i === 0) {
-                    ctx.moveTo(x, y);
-                } else {
-                    ctx.lineTo(x, y);
-                }
-            }
-            ctx.stroke();
-
-            // Draw conversions line
-            ctx.strokeStyle = '#e74c3c';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-
-            for (let i = 0; i < conversionsData.length; i++) {
-                var x = padding + (i * stepX);
-                var y = height - padding - (conversionsData[i] / maxValue * chartHeight);
-
-                if (i === 0) {
-                    ctx.moveTo(x, y);
-                } else {
-                    ctx.lineTo(x, y);
-                }
-            }
-            ctx.stroke();
+        // Previous button
+        if (currentPage > 1) {
+            html += '<button class="page-btn" data-page="' + (currentPage - 1) + '">&laquo; Previous</button>';
         }
 
-        // Add legend
-        ctx.fillStyle = '#3498db';
-        ctx.fillRect(10, 10, 15, 15);
-        ctx.fillStyle = '#333';
-        ctx.font = '12px Arial';
-        ctx.fillText('Clicks', 30, 22);
+        // Page numbers
+        for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+            const activeClass = i === currentPage ? ' active' : '';
+            html += '<button class="page-btn' + activeClass + '" data-page="' + i + '">' + i + '</button>';
+        }
 
-        ctx.fillStyle = '#e74c3c';
-        ctx.fillRect(80, 10, 15, 15);
-        ctx.fillStyle = '#333';
-        ctx.fillText('Conversions', 100, 22);
+        // Next button
+        if (currentPage < totalPages) {
+            html += '<button class="page-btn" data-page="' + (currentPage + 1) + '">Next &raquo;</button>';
+        }
+
+        html += '</div>';
+        container.html(html);
     }
 
-    // Utility functions
-    function escapeHtml(text) {
-        var map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        };
+    // Handle pagination clicks
+    $(document).on('click', '.page-btn', function(e) {
+        e.preventDefault();
+        const page = $(this).data('page');
+        loadAffiliateLinks(page);
+    });
 
-        return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+    // Helper functions
+    function truncateUrl(url, maxLength = 50) {
+        if (url.length <= maxLength) return url;
+        return url.substring(0, maxLength) + '...';
     }
 
     function formatDate(dateString) {
-        var date = new Date(dateString);
-        return date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleDateString();
     }
 
-    function showNotification(message, type) {
+    function showNotification(message, type = 'info') {
         // Remove existing notifications
-        $('.affiliate-notification').remove();
+        $('.affiliate-bloom-notification').remove();
 
-        var notificationClass = 'affiliate-notification affiliate-notification-' + type;
-        var notification = $('<div class="' + notificationClass + '">' + message + '</div>');
-
+        const notification = $('<div class="affiliate-bloom-notification ' + type + '">' + message + '</div>');
         $('body').append(notification);
 
         // Show notification
@@ -529,105 +359,12 @@ jQuery(document).ready(function($) {
             notification.addClass('show');
         }, 100);
 
-        // Hide notification after 5 seconds
+        // Hide after 3 seconds
         setTimeout(function() {
             notification.removeClass('show');
             setTimeout(function() {
                 notification.remove();
             }, 300);
-        }, 5000);
+        }, 3000);
     }
-
-    // Auto-refresh stats every 5 minutes
-    setInterval(function() {
-        if ($('.affiliate-bloom-dashboard').length > 0) {
-            refreshDashboardStats();
-        }
-    }, 300000); // 5 minutes
-
-    function refreshDashboardStats() {
-        $.ajax({
-            url: affiliateBloom.ajax_url,
-            type: 'POST',
-            data: {
-                action: 'get_affiliate_stats',
-                nonce: affiliateBloom.nonce
-            },
-            success: function(response) {
-                if (response.success) {
-                    updateDashboardStats(response.data);
-                }
-            },
-            error: function() {
-                console.log('Failed to refresh stats');
-            }
-        });
-    }
-
-    function updateDashboardStats(stats) {
-        $('.affiliate-stat-card').each(function() {
-            var card = $(this);
-            var statText = card.find('p').text().toLowerCase();
-
-            if (statText.includes('clicks')) {
-                card.find('h3').text(numberFormat(stats.total_clicks));
-            } else if (statText.includes('conversions')) {
-                card.find('h3').text(numberFormat(stats.total_conversions));
-            } else if (statText.includes('total earnings')) {
-                card.find('h3').text('$' + numberFormat(stats.total_earnings, 2));
-            } else if (statText.includes('pending')) {
-                card.find('h3').text('$' + numberFormat(stats.pending_earnings, 2));
-            } else if (statText.includes('balance')) {
-                card.find('h3').text('$' + numberFormat(stats.current_balance, 2));
-            } else if (statText.includes('rate')) {
-                card.find('h3').text(stats.conversion_rate + '%');
-            }
-        });
-    }
-
-    function numberFormat(number, decimals = 0) {
-        return Number(number).toLocaleString('en-US', {
-            minimumFractionDigits: decimals,
-            maximumFractionDigits: decimals
-        });
-    }
-
-    // Initialize tooltips
-    $(document).on('mouseenter', '[title]', function() {
-        var $this = $(this);
-        var title = $this.attr('title');
-
-        if (title) {
-            $this.data('original-title', title);
-            $this.removeAttr('title');
-
-            var tooltip = $('<div class="affiliate-tooltip">' + title + '</div>');
-            $('body').append(tooltip);
-
-            var offset = $this.offset();
-            tooltip.css({
-                top: offset.top - tooltip.outerHeight() - 5,
-                left: offset.left + ($this.outerWidth() / 2) - (tooltip.outerWidth() / 2)
-            }).fadeIn(200);
-        }
-    });
-
-    $(document).on('mouseleave', '[data-original-title]', function() {
-        var $this = $(this);
-        $this.attr('title', $this.data('original-title'));
-        $('.affiliate-tooltip').remove();
-    });
-
-    // Handle responsive menu toggle
-    $(document).on('click', '.affiliate-mobile-menu-toggle', function(e) {
-        e.preventDefault();
-        $('.affiliate-tab-nav').toggleClass('mobile-open');
-    });
-
-    // Close mobile menu when clicking outside
-    $(document).on('click', function(e) {
-        if (!$(e.target).closest('.affiliate-tab-nav, .affiliate-mobile-menu-toggle').length) {
-            $('.affiliate-tab-nav').removeClass('mobile-open');
-        }
-    });
 });

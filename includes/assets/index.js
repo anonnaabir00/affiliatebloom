@@ -1,11 +1,11 @@
 jQuery(document).ready(function($) {
 
-    // Generate affiliate link
-    $(document).on('click', '#generate-affiliate-link', function(e) {
+    // Generate core link
+    $(document).on('click', '#generate-core-link', function(e) {
         e.preventDefault();
 
         if (!affiliateBloom.is_affiliate) {
-            alert('You are not an approved affiliate.');
+            alert('You are not an approved core.');
             return;
         }
 
@@ -25,8 +25,8 @@ jQuery(document).ready(function($) {
             },
             success: function(response) {
                 if (response.success) {
-                    $('#affiliate-url').val(response.data.affiliate_url);
-                    $('#affiliate-result').slideDown();
+                    $('#core-url').val(response.data.affiliate_url);
+                    $('#core-result').slideDown();
                     button.text(affiliateBloom.messages.generated).addClass('success');
 
                     // Update share buttons

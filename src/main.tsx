@@ -4,7 +4,7 @@ import App from './App'
 import './index.css'
 
 // Admin panel root
-const adminElement = document.getElementById("affiliate-bloom-admin")
+const adminElement = document.getElementById("core-bloom-admin")
 if (adminElement) {
     createRoot(adminElement).render(
         <StrictMode>

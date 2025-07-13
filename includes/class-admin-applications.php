@@ -307,7 +307,7 @@ class AdminApplications {
                               </td>
                               <td><?php echo intval($affiliate->total_clicks); ?></td>
                               <td><?php echo intval($affiliate->total_conversions); ?></td>
-                              <td>$<?php echo number_format($affiliate->total_earnings, 2); ?></td>
+                              <td>$<?php echo get_user_meta(get_current_user_id(), 'affiliate_balance', true);?></td>
                               <td>
                                   <span class="status-badge status-<?php echo $affiliate->affiliate_status; ?>">
                                       <?php echo esc_html(ucfirst($affiliate->affiliate_status)); ?>

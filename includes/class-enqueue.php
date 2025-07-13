@@ -38,6 +38,11 @@ class Enqueue {
           AFFILIATE_BLOOM_VERSION
       );
 
+      wp_localize_script('affiliate-bloom-frontend', 'affiliate_bloom_ajax', array(
+              'ajax_url' => admin_url('admin-ajax.php'),
+              'nonce' => wp_create_nonce('affiliate_bloom_nonce')
+          ));
+
       // Localize script
       wp_localize_script('affiliate-bloom-frontend', 'affiliateBloom', array(
           'ajax_url' => admin_url('admin-ajax.php'),

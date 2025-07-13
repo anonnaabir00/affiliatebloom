@@ -64,12 +64,14 @@ final class AffiliateBloom {
 
 	public function dispatch_hooks() {
 		AffiliateBloom\Autoload::init();
+		AffiliateBloom\Database::init();
 		AffiliateBloom\Enqueue::init();
 		AffiliateBloom\Frontend::init();
 		AffiliateBloom\Admin::init();
         AffiliateBloom\Ajax::init();
         AffiliateBloom\Application::init();
         AffiliateBloom\AdminApplications::init();
+        AffiliateBloom\Actions::init();
 // 		AffiliateBloom\Shortcodes::init();
 // 		AffiliateBloom\API::init();
 // 		AffiliateBloom\Actions::init();
