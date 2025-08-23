@@ -1,5 +1,7 @@
 <?php
 namespace AffiliateBloom;
+use AffiliateBloom\LinkManager;
+use AffiliateBloom\ReferralManager;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -8,23 +10,25 @@ if (!defined('ABSPATH')) {
 class Ajax {
 
     public static function init() {
+        LinkManager::init();
+        ReferralManager::init();
         $instance = new self();
         return $instance;
     }
 
-    public function __construct() {
-        // Database class is initialized elsewhere, we'll access it via new instance when needed
-
-        // AJAX handlers for logged-in users
-        add_action('wp_ajax_generate_affiliate_link', array($this, 'generate_affiliate_link'));
-        add_action('wp_ajax_get_user_affiliate_links', array($this, 'get_user_affiliate_links'));
-        add_action('wp_ajax_delete_affiliate_link', array($this, 'delete_affiliate_link'));
-        add_action('wp_ajax_get_affiliate_stats', array($this, 'get_affiliate_stats'));
-
-        // Test handler
-        add_action('wp_ajax_affiliate_bloom_test', array($this, 'test_ajax'));
-        add_action('wp_ajax_nopriv_affiliate_bloom_test', array($this, 'test_ajax'));
-    }
+//     public function __construct() {
+//         // Database class is initialized elsewhere, we'll access it via new instance when needed
+//
+//         // AJAX handlers for logged-in users
+//         add_action('wp_ajax_generate_affiliate_link', array($this, 'generate_affiliate_link'));
+//         add_action('wp_ajax_get_user_affiliate_links', array($this, 'get_user_affiliate_links'));
+//         add_action('wp_ajax_delete_affiliate_link', array($this, 'delete_affiliate_link'));
+//         add_action('wp_ajax_get_affiliate_stats', array($this, 'get_affiliate_stats'));
+//
+//         // Test handler
+//         add_action('wp_ajax_affiliate_bloom_test', array($this, 'test_ajax'));
+//         add_action('wp_ajax_nopriv_affiliate_bloom_test', array($this, 'test_ajax'));
+//     }
 
     public function test_ajax() {
         wp_send_json_success('AJAX is working!');

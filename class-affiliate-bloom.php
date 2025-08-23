@@ -72,7 +72,7 @@ final class AffiliateBloom {
         AffiliateBloom\Application::init();
         AffiliateBloom\AdminApplications::init();
         AffiliateBloom\Actions::init();
-// 		AffiliateBloom\Shortcodes::init();
+		AffiliateBloom\Shortcodes::init();
 // 		AffiliateBloom\API::init();
 // 		AffiliateBloom\Actions::init();
 	}
