@@ -1,0 +1,33 @@
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import './index.css';
+
+import AffiliateLinks from "./shortcodes/AffiliateLinks.jsx";
+import LoginBonus from "./shortcodes/LoginBonus.jsx";
+import ReferralLinks from "./shortcodes/ReferralLinks.jsx";
+import ReferralDashboard from "./shortcodes/ReferralLinks.jsx";
+
+
+const affiliateLinksElements = document.querySelectorAll('.affiliate_links');
+affiliateLinksElements.forEach(element => {
+    const key = element.getAttribute('data-key');
+    createRoot(element).render(
+        <AffiliateLinks dataKey={key} />
+    );
+});
+
+const ReferralLinksElements = document.querySelectorAll('.referral_links');
+ReferralLinksElements.forEach(element => {
+    const key = element.getAttribute('data-key');
+    createRoot(element).render(
+        <ReferralDashboard dataKey={key} />
+    );
+});
+
+const LoginBonusElements = document.querySelectorAll('.login_bonus');
+LoginBonusElements.forEach(element => {
+    const key = element.getAttribute('data-key');
+    createRoot(element).render(
+        <LoginBonus dataKey={key} />
+    );
+});
