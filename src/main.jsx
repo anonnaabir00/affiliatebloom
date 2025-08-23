@@ -6,6 +6,8 @@ import AffiliateLinks from "./shortcodes/AffiliateLinks.jsx";
 import LoginBonus from "./shortcodes/LoginBonus.jsx";
 import ReferralLinks from "./shortcodes/ReferralLinks.jsx";
 import ReferralDashboard from "./shortcodes/ReferralLinks.jsx";
+import AuthLogin from "./shortcodes/AuthLogin.jsx";
+import AuthRegister from "./shortcodes/AuthRegister.jsx";
 
 
 const affiliateLinksElements = document.querySelectorAll('.affiliate_links');
@@ -21,6 +23,22 @@ ReferralLinksElements.forEach(element => {
     const key = element.getAttribute('data-key');
     createRoot(element).render(
         <ReferralDashboard dataKey={key} />
+    );
+});
+
+const partnerLoginElements = document.querySelectorAll('.auth_login');
+partnerLoginElements.forEach(element => {
+    const key = element.getAttribute('data-key');
+    createRoot(element).render(
+        <AuthLogin dataKey={key} />
+    );
+});
+
+const partnerRegistrationElements = document.querySelectorAll('.auth_register');
+partnerRegistrationElements.forEach(element => {
+    const key = element.getAttribute('data-key');
+    createRoot(element).render(
+        <AuthRegister dataKey={key} />
     );
 });
 

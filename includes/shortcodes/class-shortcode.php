@@ -4,6 +4,8 @@ namespace AffiliateBloom;
 use AffiliateBloom\DashboardSidebar;
 use AffiliateBloom\AffiliateLinks;
 use AffiliateBloom\ReferralLinks;
+use AffiliateBloom\AuthLogin;
+use AffiliateBloom\AuthRegister;
 use AffiliateBloom\LoginBonus;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -17,6 +19,8 @@ class Shortcodes {
 		DashboardSidebar::init();
 		AffiliateLinks::init();
 		ReferralLinks::init();
+		AuthLogin::init();
+		AuthRegister::init();
 		LoginBonus::init();
 	}
 }
