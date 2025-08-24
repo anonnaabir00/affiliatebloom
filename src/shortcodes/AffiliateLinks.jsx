@@ -14,43 +14,11 @@ const AffiliateLinks = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalLinks, setTotalLinks] = useState(0);
-    const [stats, setStats] = useState({
-        total_clicks: 0,
-        total_conversions: 0,
-        conversion_rate: 0,
-        total_earnings: 0,
-        pending_earnings: 0,
-        current_balance: 0
-    });
-    const [autoRefresh, setAutoRefresh] = useState(false);
 
     // Load initial data
     useEffect(() => {
-        loadUserStats();
         loadAffiliateLinks(1);
     }, []);
-
-    // Auto-refresh every 30 seconds when enabled
-    useEffect(() => {
-        let interval;
-        if (autoRefresh) {
-            interval = setInterval(() => {
-                loadUserStats();
-                loadAffiliateLinks(currentPage);
-            }, 30000); // 30 seconds
-        }
-        return () => {
-            if (interval) clearInterval(interval);
-        };
-    }, [autoRefresh, currentPage]);
-
-    const loadUserStats = () => {
-        fetchData('affiliate_bloom_get_user_stats', (response) => {
-            if (response.success && response.data?.stats) {
-                setStats(response.data.stats);
-            }
-        }, { nonce: affiliateBloom.nonce });
-    };
 
     const loadAffiliateLinks = (page = 1) => {
         setLoading(true);
@@ -90,9 +58,8 @@ const AffiliateLinks = () => {
                 message.success(response.data.message || 'Affiliate link generated successfully!');
                 setNewUrl('');
                 setLinkName('');
-                // Reload links and stats
+                // Reload links
                 loadAffiliateLinks(currentPage);
-                loadUserStats();
             }
         } catch (error) {
             message.error(error.data?.message || 'Failed to generate affiliate link');
@@ -118,7 +85,6 @@ const AffiliateLinks = () => {
                     if (response.success) {
                         message.success('Link deleted successfully');
                         loadAffiliateLinks(currentPage);
-                        loadUserStats();
                     }
                 } catch (error) {
                     message.error(error.data?.message || 'Failed to delete link');
@@ -146,16 +112,6 @@ const AffiliateLinks = () => {
 
     const handleRefresh = () => {
         loadAffiliateLinks(currentPage);
-        loadUserStats();
-    };
-
-    const toggleAutoRefresh = () => {
-        setAutoRefresh(!autoRefresh);
-        if (!autoRefresh) {
-            message.info('Auto-refresh enabled (every 30 seconds)');
-        } else {
-            message.info('Auto-refresh disabled');
-        }
     };
 
     // Helper function to get click status color
@@ -179,60 +135,22 @@ const AffiliateLinks = () => {
                 <div className="flex justify-between items-start mb-8">
                     <div>
                         <Title level={2} className="mb-2 text-gray-800">
-                            Affiliate URLs
+                            Affiliate Link Manager
                         </Title>
                         <Text className="text-gray-600">
-                            Manage and track your affiliate links
+                            Create, manage and track your affiliate links
                         </Text>
                     </div>
-                    <Space>
-                        <Button
-                            type={autoRefresh ? "primary" : "default"}
-                            onClick={toggleAutoRefresh}
-                            className={autoRefresh ? "bg-green-500 hover:bg-green-600" : ""}
-                        >
-                            <i className={`fas ${autoRefresh ? 'fa-pause' : 'fa-play'} mr-2`}></i>
-                            {autoRefresh ? 'Stop Auto-Refresh' : 'Auto-Refresh'}
-                        </Button>
-                        <Button
-                            type="primary"
-                            size="large"
-                            onClick={handleRefresh}
-                            className="bg-blue-500 hover:bg-blue-600"
-                            loading={loading}
-                        >
-                            <i className="fas fa-refresh mr-2"></i>
-                            Refresh Data
-                        </Button>
-                    </Space>
-                </div>
-
-                {/* Enhanced Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-8">
-                    <Card className="text-center hover:shadow-md transition-shadow">
-                        <div className="text-2xl font-bold text-blue-600">{formatNumber(stats.total_clicks)}</div>
-                        <div className="text-gray-500 text-sm">Total Clicks</div>
-                    </Card>
-                    <Card className="text-center hover:shadow-md transition-shadow">
-                        <div className="text-2xl font-bold text-green-600">{formatNumber(stats.total_conversions)}</div>
-                        <div className="text-gray-500 text-sm">Conversions</div>
-                    </Card>
-                    <Card className="text-center hover:shadow-md transition-shadow">
-                        <div className="text-2xl font-bold text-purple-600">{stats.conversion_rate}%</div>
-                        <div className="text-gray-500 text-sm">Conversion Rate</div>
-                    </Card>
-                    <Card className="text-center hover:shadow-md transition-shadow">
-                        <div className="text-2xl font-bold text-orange-600">${formatNumber(stats.total_earnings)}</div>
-                        <div className="text-gray-500 text-sm">Total Earnings</div>
-                    </Card>
-                    <Card className="text-center hover:shadow-md transition-shadow">
-                        <div className="text-2xl font-bold text-yellow-600">${formatNumber(stats.pending_earnings)}</div>
-                        <div className="text-gray-500 text-sm">Pending</div>
-                    </Card>
-                    <Card className="text-center hover:shadow-md transition-shadow">
-                        <div className="text-2xl font-bold text-teal-600">${formatNumber(stats.current_balance)}</div>
-                        <div className="text-gray-500 text-sm">Balance</div>
-                    </Card>
+                    <Button
+                        type="primary"
+                        size="large"
+                        onClick={handleRefresh}
+                        className="bg-blue-500 hover:bg-blue-600"
+                        loading={loading}
+                    >
+                        <i className="fas fa-refresh mr-2"></i>
+                        Refresh Links
+                    </Button>
                 </div>
 
                 {/* Generate New URL Section */}
@@ -367,7 +285,7 @@ const AffiliateLinks = () => {
                                         </Text>
                                     </div>
 
-                                    {/* Enhanced Stats with Visual Indicators */}
+                                    {/* Individual Link Stats */}
                                     <div className="border-t pt-4">
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                                             <div className="bg-blue-50 p-3 rounded-lg text-center">
@@ -438,18 +356,6 @@ const AffiliateLinks = () => {
                                 `${range[0]}-${range[1]} of ${total} links`
                             }
                         />
-                    </div>
-                )}
-
-                {/* Loading indicator for auto-refresh */}
-                {autoRefresh && (
-                    <div className="fixed bottom-4 right-4">
-                        <Card className="shadow-lg">
-                            <div className="flex items-center space-x-2 text-green-600">
-                                <Spin size="small" />
-                                <Text className="text-sm">Auto-refreshing...</Text>
-                            </div>
-                        </Card>
                     </div>
                 )}
             </div>

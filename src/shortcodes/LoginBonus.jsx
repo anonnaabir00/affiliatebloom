@@ -50,14 +50,14 @@ const LoginBonus = () => {
                             precision={2}
                         />
                     </Col>
-                    <Col span={8}>
-                        <Statistic
-                            title="Login Streak"
-                            value={bonusData.stats.streak_days}
-                            prefix={<TrophyOutlined />}
-                            suffix="days"
-                        />
-                    </Col>
+                    {/*<Col span={8}>*/}
+                    {/*    <Statistic*/}
+                    {/*        title="Login Streak"*/}
+                    {/*        value={bonusData.stats.streak_days}*/}
+                    {/*        prefix={<TrophyOutlined />}*/}
+                    {/*        suffix="days"*/}
+                    {/*    />*/}
+                    {/*</Col>*/}
                 </Row>
             </Card>
 

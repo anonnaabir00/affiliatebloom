@@ -8,6 +8,8 @@ import ReferralLinks from "./shortcodes/ReferralLinks.jsx";
 import ReferralDashboard from "./shortcodes/ReferralLinks.jsx";
 import AuthLogin from "./shortcodes/AuthLogin.jsx";
 import AuthRegister from "./shortcodes/AuthRegister.jsx";
+import DashboardStats from "./shortcodes/DashboardStats.jsx";
+import AffiliateOffers from "./shortcodes/AffiliateOffers.jsx";
 
 
 const affiliateLinksElements = document.querySelectorAll('.affiliate_links');
@@ -47,5 +49,21 @@ LoginBonusElements.forEach(element => {
     const key = element.getAttribute('data-key');
     createRoot(element).render(
         <LoginBonus dataKey={key} />
+    );
+});
+
+const DashboardStatsElements = document.querySelectorAll('.dashboard_stats');
+DashboardStatsElements.forEach(element => {
+    const key = element.getAttribute('data-key');
+    createRoot(element).render(
+        <DashboardStats dataKey={key} />
+    );
+});
+
+const affiliateOffersElements = document.querySelectorAll('.affiliate_offers');
+affiliateOffersElements.forEach(element => {
+    const key = element.getAttribute('data-key');
+    createRoot(element).render(
+        <AffiliateOffers dataKey={key} />
     );
 });

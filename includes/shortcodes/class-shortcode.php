@@ -7,6 +7,8 @@ use AffiliateBloom\ReferralLinks;
 use AffiliateBloom\AuthLogin;
 use AffiliateBloom\AuthRegister;
 use AffiliateBloom\LoginBonus;
+use AffiliateBloom\DashboardStats;
+use AffiliateBloom\AffiliateOffers;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -22,5 +24,7 @@ class Shortcodes {
 		AuthLogin::init();
 		AuthRegister::init();
 		LoginBonus::init();
+		DashboardStats::init();
+		AffiliateOffers::init();
 	}
 }
