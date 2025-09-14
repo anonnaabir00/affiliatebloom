@@ -1,137 +1,98 @@
 import React, { useState, useEffect } from 'react';
 
 const ReferralDashboard = () => {
-    const [activeTab, setActiveTab] = useState('links');
-    const [newUrl, setNewUrl] = useState('');
-    const [referralLinks, setReferralLinks] = useState([]);
-    const [referralUsers, setReferralUsers] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [generating, setGenerating] = useState(false);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [totalItems, setTotalItems] = useState(0);
     const [stats, setStats] = useState({
-        total_referrals: 0,
-        active_referrals: 0,
-        total_bonus_earned: 0,
-        pending_referrals: 0,
         referral_code: '',
-        bonus_per_referral: 0,
-        total_clicks: 0,
-        conversion_rate: 0
+        total_referrals: 0,
+        total_earnings: 0,
+        bonus_per_referral: 10.00
     });
+    const [referrals, setReferrals] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
-    // Mock data for demonstration - replace with actual API calls
-    const mockStats = {
-        total_referrals: 15,
-        active_referrals: 12,
-        total_bonus_earned: 150.00,
-        pending_referrals: 3,
-        referral_code: 'REF123_ABC456',
-        bonus_per_referral: 10.00,
-        total_clicks: 245,
-        conversion_rate: 6.12
-    };
-
-    const mockLinks = [
-        {
-            id: 'link_1',
-            name: 'Homepage Referral',
-            target_url: 'https://example.com',
-            affiliate_url: 'https://example.com?ref=REF123_ABC456',
-            clicks: 89,
-            conversions: 5,
-            created_date: '2024-01-15 10:30:00',
-            status: 'active'
-        },
-        {
-            id: 'link_2',
-            name: 'Product Page Referral',
-            target_url: 'https://example.com/products',
-            affiliate_url: 'https://example.com/products?ref=REF123_ABC456',
-            clicks: 67,
-            conversions: 3,
-            created_date: '2024-01-20 14:20:00',
-            status: 'active'
-        }
-    ];
-
-    const mockReferrals = [
-        {
-            id: 'ref_1',
-            referred_username: 'johndoe123',
-            referred_email: 'john@example.com',
-            status: 'completed',
-            bonus_amount: 10.00,
-            created_date: '2024-01-15 10:45:00',
-            completed_date: '2024-01-15 11:00:00'
-        },
-        {
-            id: 'ref_2',
-            referred_username: 'janedoe456',
-            referred_email: 'jane@example.com',
-            status: 'pending',
-            bonus_amount: 10.00,
-            created_date: '2024-01-22 09:15:00',
-            completed_date: null
-        }
-    ];
+    // Get WordPress AJAX URL (assuming it's available globally)
+    const ajaxUrl = window.ajaxurl || '/wp-admin/admin-ajax.php';
 
     useEffect(() => {
-        // Initialize with mock data - replace with actual API calls
-        setStats(mockStats);
-        setReferralLinks(mockLinks);
-        setReferralUsers(mockReferrals);
-        setTotalItems(mockLinks.length);
-        setTotalPages(1);
+        fetchReferralData();
     }, []);
 
-    const validateUrl = (url) => {
+    const fetchReferralData = async () => {
+        setLoading(true);
+        setError('');
+
         try {
-            new URL(url);
-            return true;
-        } catch {
-            return false;
+            // Fetch stats
+            const statsResponse = await fetch(ajaxUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    action: 'affiliate_bloom_get_referral_stats',
+                    nonce: affiliateBloom.nonce
+                })
+            });
+
+            const statsData = await statsResponse.json();
+
+            if (statsData.success) {
+                setStats(statsData.data.stats);
+            } else {
+                throw new Error(statsData.data?.message || 'Failed to fetch stats');
+            }
+
+            // Fetch referrals list
+            const referralsResponse = await fetch(ajaxUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    action: 'affiliate_bloom_get_referral_history',
+                    nonce: affiliateBloom.nonce
+                })
+            });
+
+            const referralsData = await referralsResponse.json();
+
+            if (referralsData.success) {
+                setReferrals(referralsData.data.referrals || []);
+            } else {
+                throw new Error(referralsData.data?.message || 'Failed to fetch referrals');
+            }
+
+        } catch (err) {
+            console.error('Error fetching referral data:', err);
+            setError('Failed to load referral data. Please refresh the page.');
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleGenerateLink = () => {
-        if (!newUrl.trim()) {
-            alert('Please enter a page URL');
-            return;
+    const generateReferralUrl = (targetPath = '') => {
+        let fullUrl;
+
+        if (targetPath && targetPath.startsWith('http')) {
+            // Full URL provided
+            fullUrl = targetPath;
+        } else if (targetPath) {
+            // Relative path provided
+            fullUrl = window.location.origin + targetPath;
+        } else {
+            // No path provided, use current origin
+            fullUrl = window.location.origin;
         }
 
-        if (!validateUrl(newUrl.trim())) {
-            alert('Please enter a valid URL (e.g., https://example.com/page)');
-            return;
-        }
-
-        setGenerating(true);
-
-        // Simulate API call
-        setTimeout(() => {
-            const newLink = {
-                id: 'link_' + Date.now(),
-                name: 'Link to ' + new URL(newUrl.trim()).hostname,
-                target_url: newUrl.trim(),
-                affiliate_url: newUrl.trim() + (newUrl.includes('?') ? '&' : '?') + 'ref=' + stats.referral_code,
-                clicks: 0,
-                conversions: 0,
-                created_date: new Date().toISOString(),
-                status: 'active'
-            };
-
-            setReferralLinks(prev => [newLink, ...prev]);
-            setNewUrl('');
-            setGenerating(false);
-            alert('Referral link generated successfully!');
-        }, 1000);
-    };
-
-    const handleDeleteLink = (linkId) => {
-        if (window.confirm('Are you sure you want to delete this link? This action cannot be undone.')) {
-            setReferralLinks(prev => prev.filter(link => link.id !== linkId));
-            alert('Link deleted successfully');
+        try {
+            const url = new URL(fullUrl);
+            url.searchParams.set('ref', stats.referral_code);
+            return url.toString();
+        } catch (error) {
+            // Fallback if URL construction fails
+            const separator = fullUrl.includes('?') ? '&' : '?';
+            return `${fullUrl}${separator}ref=${stats.referral_code}`;
         }
     };
 
@@ -174,73 +135,108 @@ const ReferralDashboard = () => {
             return new Date(dateString).toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
+                day: 'numeric'
             });
         } catch {
             return dateString;
         }
     };
 
-    const StatCard = ({ title, value, subtitle, color = "blue" }) => (
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-                <div>
-                    <p className="text-gray-500 text-sm font-medium">{title}</p>
-                    <p className={`text-2xl font-bold text-${color}-600`}>{value}</p>
-                    {subtitle && <p className="text-xs text-gray-400 mt-1">{subtitle}</p>}
-                </div>
-                <div className={`w-12 h-12 bg-${color}-100 rounded-lg flex items-center justify-center`}>
-                    <div className={`w-6 h-6 bg-${color}-600 rounded`}></div>
+    const formatCurrency = (amount) => {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD'
+        }).format(amount);
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading your referral dashboard...</p>
                 </div>
             </div>
-        </div>
-    );
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-8 h-8 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Data</h3>
+                    <p className="text-gray-600 mb-4">{error}</p>
+                    <button
+                        onClick={fetchReferralData}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <div className="max-w-7xl mx-auto px-4 py-8">
-                {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Referral Dashboard</h1>
-                    <p className="text-gray-600">Manage your referral links and track your earnings</p>
+            <div className="max-w-4xl mx-auto px-4 py-8">
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-gray-500 text-sm font-medium">Total Referrals</p>
+                                <p className="text-2xl font-bold text-blue-600">{stats.total_referrals}</p>
+                            </div>
+                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-gray-500 text-sm font-medium">Total Earnings</p>
+                                <p className="text-2xl font-bold text-green-600">{formatCurrency(stats.total_earnings)}</p>
+                            </div>
+                            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-gray-500 text-sm font-medium">Per Referral</p>
+                                <p className="text-2xl font-bold text-purple-600">{formatCurrency(stats.bonus_per_referral)}</p>
+                            </div>
+                            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <svg className="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732L14.146 12.8l-1.179 4.456a1 1 0 01-1.934 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732L9.854 7.2l1.179-4.456A1 1 0 0112 2z" clipRule="evenodd" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <StatCard
-                        title="Total Referrals"
-                        value={stats.total_referrals}
-                        subtitle="All time"
-                        color="blue"
-                    />
-                    <StatCard
-                        title="Active Referrals"
-                        value={stats.active_referrals}
-                        subtitle="Completed registrations"
-                        color="green"
-                    />
-                    <StatCard
-                        title="Total Earnings"
-                        value={`$${stats.total_bonus_earned.toFixed(2)}`}
-                        subtitle={`$${stats.bonus_per_referral} per referral`}
-                        color="purple"
-                    />
-                    <StatCard
-                        title="Conversion Rate"
-                        value={`${stats.conversion_rate}%`}
-                        subtitle={`${stats.total_clicks} total clicks`}
-                        color="orange"
-                    />
-                </div>
-
-                {/* Referral Code Card */}
+                {/* Referral Code Section */}
                 <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-lg shadow-lg mb-8">
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                         <div>
                             <h3 className="text-xl font-semibold mb-2">Your Referral Code</h3>
-                            <p className="text-blue-100 mb-4">Share this code or use it in your referral links</p>
+                            <p className="text-blue-100 mb-4">Share this code or add it to any URL</p>
                         </div>
                         <div className="flex items-center space-x-4">
                             <div className="bg-white bg-opacity-20 px-4 py-2 rounded-lg">
@@ -250,226 +246,113 @@ const ReferralDashboard = () => {
                                 onClick={() => handleCopyUrl(stats.referral_code)}
                                 className="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg transition-all"
                             >
-                                Copy
+                                Copy Code
                             </button>
                         </div>
                     </div>
                 </div>
 
-                {/* Tab Navigation */}
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
-                    <div className="border-b border-gray-200">
-                        <nav className="flex space-x-8 px-6">
-                            <button
-                                onClick={() => setActiveTab('links')}
-                                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                                    activeTab === 'links'
-                                        ? 'border-blue-500 text-blue-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                }`}
-                            >
-                                Referral Links
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('referrals')}
-                                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                                    activeTab === 'referrals'
-                                        ? 'border-blue-500 text-blue-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                }`}
-                            >
-                                My Referrals
-                            </button>
-                        </nav>
-                    </div>
-
-                    {/* Tab Content */}
-                    <div className="p-6">
-                        {activeTab === 'links' && (
+                {/* Quick Links Section */}
+                {stats.referral_code && (
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Referral Links</h3>
+                        <div className="space-y-4">
                             <div>
-                                {/* Generate New Link Section */}
-                                <div className="mb-8">
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Generate New Referral Link</h3>
-                                    <div className="flex flex-col sm:flex-row gap-4">
-                                        <input
-                                            type="url"
-                                            placeholder="Enter page URL (e.g., https://example.com/products/premium)"
-                                            value={newUrl}
-                                            onChange={(e) => setNewUrl(e.target.value)}
-                                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                                            onKeyPress={(e) => e.key === 'Enter' && handleGenerateLink()}
-                                        />
-                                        <button
-                                            onClick={handleGenerateLink}
-                                            disabled={generating || !newUrl.trim()}
-                                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                                        >
-                                            {generating ? 'Generating...' : 'Generate Link'}
-                                        </button>
-                                    </div>
-                                    <p className="text-sm text-gray-500 mt-2">
-                                        Enter the full URL you want to create a referral link for
-                                    </p>
-                                </div>
-
-                                {/* Links List */}
-                                <div>
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Referral Links</h3>
-                                    {referralLinks.length === 0 ? (
-                                        <div className="text-center py-12 bg-gray-50 rounded-lg">
-                                            <div className="text-gray-400 mb-4">
-                                                <div className="w-16 h-16 bg-gray-300 rounded-full mx-auto mb-4 flex items-center justify-center">
-                                                    <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" />
-                                                    </svg>
-                                                </div>
-                                                <h4 className="text-lg font-medium text-gray-600 mb-2">No referral links found</h4>
-                                                <p className="text-gray-500">Generate your first referral link above</p>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            {referralLinks.map((link) => (
-                                                <div key={link.id} className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                                                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-4">
-                                                        <div className="flex-1">
-                                                            <div className="flex items-center space-x-3 mb-2">
-                                                                <h4 className="text-lg font-medium text-gray-900">{link.name}</h4>
-                                                                <span className={`px-2 py-1 text-xs rounded-full ${
-                                                                    link.status === 'active'
-                                                                        ? 'bg-green-100 text-green-800'
-                                                                        : 'bg-gray-100 text-gray-800'
-                                                                }`}>
-                                                                    {link.status}
-                                                                </span>
-                                                            </div>
-                                                            <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-4">
-                                                                <span>👆 {link.clicks} clicks</span>
-                                                                <span>✅ {link.conversions} conversions</span>
-                                                                <span>📅 Created {formatDate(link.created_date)}</span>
-                                                            </div>
-                                                        </div>
-                                                        <button
-                                                            onClick={() => handleDeleteLink(link.id)}
-                                                            className="text-red-600 hover:text-red-800 transition-colors"
-                                                        >
-                                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                                                <path fillRule="evenodd" d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9zM4 5a2 2 0 012-2v1a1 1 0 001 1h6a1 1 0 001-1V3a2 2 0 012 2v6.5l1.5-.5L17 13H4v8z" clipRule="evenodd" />
-                                                            </svg>
-                                                        </button>
-                                                    </div>
-
-                                                    {/* Target URL */}
-                                                    <div className="mb-4">
-                                                        <label className="block text-sm font-medium text-gray-700 mb-2">Target URL:</label>
-                                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                                            <p className="text-blue-800 text-sm break-all">{link.target_url}</p>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Referral URL */}
-                                                    <div>
-                                                        <div className="flex items-center justify-between mb-2">
-                                                            <label className="block text-sm font-medium text-gray-700">Your Referral URL:</label>
-                                                            <div className="flex space-x-2">
-                                                                <button
-                                                                    onClick={() => handleCopyUrl(link.affiliate_url)}
-                                                                    className="text-green-600 hover:text-green-800 text-sm transition-colors flex items-center space-x-1"
-                                                                >
-                                                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                                        <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
-                                                                        <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
-                                                                    </svg>
-                                                                    <span>Copy</span>
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => window.open(link.affiliate_url, '_blank')}
-                                                                    className="text-blue-600 hover:text-blue-800 text-sm transition-colors flex items-center space-x-1"
-                                                                >
-                                                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                                        <path fillRule="evenodd" d="M4.25 5.5a.75.75 0 00-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 00.75-.75v-4a.75.75 0 011.5 0v4A2.25 2.25 0 0112.75 17h-8.5A2.25 2.25 0 012 14.75v-8.5A2.25 2.25 0 014.25 4h5a.75.75 0 010 1.5h-5z" clipRule="evenodd" />
-                                                                        <path fillRule="evenodd" d="M6.194 12.753a.75.75 0 001.06.053L16.5 4.44v2.81a.75.75 0 001.5 0v-4.5a.75.75 0 00-.75-.75h-4.5a.75.75 0 000 1.5h2.553l-9.056 8.194a.75.75 0 00-.053 1.06z" clipRule="evenodd" />
-                                                                    </svg>
-                                                                    <span>Open</span>
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                                                            <code className="text-green-800 text-sm break-all">{link.affiliate_url}</code>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Homepage</label>
+                                <div className="flex items-center space-x-2">
+                                    <input
+                                        type="text"
+                                        value={generateReferralUrl()}
+                                        readOnly
+                                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
+                                    />
+                                    <button
+                                        onClick={() => handleCopyUrl(generateReferralUrl())}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                                    >
+                                        Copy
+                                    </button>
                                 </div>
                             </div>
-                        )}
 
-                        {activeTab === 'referrals' && (
                             <div>
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Referrals</h3>
-                                {referralUsers.length === 0 ? (
-                                    <div className="text-center py-12 bg-gray-50 rounded-lg">
-                                        <div className="text-gray-400 mb-4">
-                                            <div className="w-16 h-16 bg-gray-300 rounded-full mx-auto mb-4 flex items-center justify-center">
-                                                <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
-                                                </svg>
-                                            </div>
-                                            <h4 className="text-lg font-medium text-gray-600 mb-2">No referrals yet</h4>
-                                            <p className="text-gray-500">Start sharing your referral links to get your first referrals</p>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        {referralUsers.map((referral) => (
-                                            <div key={referral.id} className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center space-x-3 mb-2">
-                                                            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                                                                <span className="text-white font-medium text-sm">
-                                                                    {referral.referred_username.charAt(0).toUpperCase()}
-                                                                </span>
-                                                            </div>
-                                                            <div>
-                                                                <h4 className="text-lg font-medium text-gray-900">{referral.referred_username}</h4>
-                                                                <p className="text-sm text-gray-600">{referral.referred_email}</p>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                                                            <span>💰 ${referral.bonus_amount.toFixed(2)} bonus</span>
-                                                            <span>📅 Joined {formatDate(referral.created_date)}</span>
-                                                            {referral.completed_date && (
-                                                                <span>✅ Completed {formatDate(referral.completed_date)}</span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    <div className="mt-4 sm:mt-0">
-                                                        <span className={`px-3 py-1 text-sm rounded-full font-medium ${
-                                                            referral.status === 'completed'
-                                                                ? 'bg-green-100 text-green-800'
-                                                                : referral.status === 'pending'
-                                                                    ? 'bg-yellow-100 text-yellow-800'
-                                                                    : 'bg-gray-100 text-gray-800'
-                                                        }`}>
-                                                            {referral.status === 'completed' ? '✅ Completed' :
-                                                                referral.status === 'pending' ? '⏳ Pending' : referral.status}
-                                                        </span>
-                                                    </div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Sign Up Page</label>
+                                <div className="flex items-center space-x-2">
+                                    <input
+                                        type="text"
+                                        value={generateReferralUrl('/register')}
+                                        readOnly
+                                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
+                                    />
+                                    <button
+                                        onClick={() => handleCopyUrl(generateReferralUrl('/register'))}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                                    >
+                                        Copy
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Referrals List */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                    <div className="px-6 py-4 border-b border-gray-200">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-gray-900">Your Referrals</h3>
+                            <button
+                                onClick={fetchReferralData}
+                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                            >
+                                Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div className="p-6">
+                        {referrals.length === 0 ? (
+                            <div className="text-center py-12 bg-gray-50 rounded-lg">
+                                <div className="w-16 h-16 bg-gray-300 rounded-full mx-auto mb-4 flex items-center justify-center">
+                                    <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                                    </svg>
+                                </div>
+                                <h4 className="text-lg font-medium text-gray-600 mb-2">No referrals yet</h4>
+                                <p className="text-gray-500">Start sharing your referral links to earn rewards</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {referrals.map((referral) => (
+                                    <div key={referral.id} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center space-x-3">
+                                                <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                                                    <span className="text-white font-medium text-sm">
+                                                        {referral.referred_username.charAt(0).toUpperCase()}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-lg font-medium text-gray-900">{referral.referred_username}</h4>
+                                                    <p className="text-sm text-gray-600">{referral.referred_email}</p>
+                                                    <p className="text-xs text-gray-500">Joined {formatDate(referral.created_date)}</p>
                                                 </div>
                                             </div>
-                                        ))}
+                                            <div className="text-right">
+                                                <div className="text-lg font-semibold text-green-600">
+                                                    +{formatCurrency(referral.bonus_amount)}
+                                                </div>
+                                                <div className="text-xs text-gray-500">Bonus earned</div>
+                                            </div>
+                                        </div>
                                     </div>
-                                )}
+                                ))}
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* How It Works Section */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                {/* How It Works */}
+                <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
                     <div className="flex items-start space-x-4">
                         <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
                             <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -477,27 +360,23 @@ const ReferralDashboard = () => {
                             </svg>
                         </div>
                         <div>
-                            <h4 className="text-lg font-semibold text-blue-900 mb-3">How Referrals Work</h4>
+                            <h4 className="text-lg font-semibold text-blue-900 mb-3">How It Works</h4>
                             <div className="text-blue-800 space-y-2">
                                 <div className="flex items-start space-x-2">
                                     <span className="text-blue-600 font-semibold">1.</span>
-                                    <p>Generate a referral link for any page on your website</p>
+                                    <p>Copy your referral code or one of the quick links above</p>
                                 </div>
                                 <div className="flex items-start space-x-2">
                                     <span className="text-blue-600 font-semibold">2.</span>
-                                    <p>Share the link with potential customers via social media, email, or direct messaging</p>
+                                    <p>Share it with friends via social media, email, or direct message</p>
                                 </div>
                                 <div className="flex items-start space-x-2">
                                     <span className="text-blue-600 font-semibold">3.</span>
-                                    <p>When someone clicks your link, they'll see a registration form with your referral code</p>
+                                    <p>When someone registers using your link, you earn {formatCurrency(stats.bonus_per_referral)}</p>
                                 </div>
                                 <div className="flex items-start space-x-2">
                                     <span className="text-blue-600 font-semibold">4.</span>
-                                    <p>When they sign up through your link, you earn ${stats.bonus_per_referral.toFixed(2)} bonus</p>
-                                </div>
-                                <div className="flex items-start space-x-2">
-                                    <span className="text-blue-600 font-semibold">5.</span>
-                                    <p>Track your referral performance and earnings in this dashboard</p>
+                                    <p>Your earnings are automatically added to your account balance</p>
                                 </div>
                             </div>
                         </div>
