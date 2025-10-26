@@ -89,10 +89,6 @@ class PartnerRegister {
             $errors[] = __('Last name is required.', 'affiliate-bloom');
         }
 
-        if ( empty( $website ) ) {
-            $errors[] = __('Website URL is required.', 'affiliate-bloom');
-        }
-
         if ( ! $terms ) {
             $errors[] = __('You must accept the terms and conditions.', 'affiliate-bloom');
         }

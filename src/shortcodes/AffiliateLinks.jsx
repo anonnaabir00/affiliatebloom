@@ -14,6 +14,27 @@ const AffiliateLinks = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalLinks, setTotalLinks] = useState(0);
+    const [urlError, setUrlError] = useState('');
+
+    const validateUrl = (url) => {
+        const allowedDomain = 'example.com'; // Change this to your specific domain
+
+        try {
+            const urlObj = new URL(url);
+            const hostname = urlObj.hostname.replace('www.', '');
+
+            if (hostname !== allowedDomain) {
+                setUrlError(`Only URLs from ${allowedDomain} are allowed`);
+                return false;
+            }
+
+            setUrlError('');
+            return true;
+        } catch (e) {
+            setUrlError('Please enter a valid URL');
+            return false;
+        }
+    };
 
     // Load initial data
     useEffect(() => {
@@ -43,6 +64,10 @@ const AffiliateLinks = () => {
         if (!newUrl.trim()) {
             message.warning('Please enter a page URL');
             return;
+        }
+
+        if (!validateUrl(newUrl.trim())) {
+            return; // Stop if validation fails
         }
 
         setGenerating(true);
@@ -131,28 +156,6 @@ const AffiliateLinks = () => {
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
             <div className="max-w-6xl mx-auto">
-                {/* Header */}
-                <div className="flex justify-between items-start mb-8">
-                    <div>
-                        <Title level={2} className="mb-2 text-gray-800">
-                            Affiliate Link Manager
-                        </Title>
-                        <Text className="text-gray-600">
-                            Create, manage and track your affiliate links
-                        </Text>
-                    </div>
-                    <Button
-                        type="primary"
-                        size="large"
-                        onClick={handleRefresh}
-                        className="bg-blue-500 hover:bg-blue-600"
-                        loading={loading}
-                    >
-                        <i className="fas fa-refresh mr-2"></i>
-                        Refresh Links
-                    </Button>
-                </div>
-
                 {/* Generate New URL Section */}
                 <Card className="mb-8 shadow-sm">
                     <Title level={3} className="mb-6">
@@ -162,12 +165,25 @@ const AffiliateLinks = () => {
                         <div>
                             <Text className="block mb-2 text-gray-700">Page URL</Text>
                             <Input
-                                placeholder="Enter page URL (e.g., https://example.com/products/premium)"
+                                placeholder={`Enter page URL (e.g., https://example.com/products/premium)`}
                                 value={newUrl}
-                                onChange={(e) => setNewUrl(e.target.value)}
+                                onChange={(e) => {
+                                    setNewUrl(e.target.value);
+                                    if (e.target.value.trim()) {
+                                        validateUrl(e.target.value.trim());
+                                    } else {
+                                        setUrlError('');
+                                    }
+                                }}
                                 size="large"
                                 className="rounded-lg"
+                                status={urlError ? 'error' : ''}
                             />
+                            {urlError && (
+                                <Text type="danger" className="text-sm mt-1 block">
+                                    {urlError}
+                                </Text>
+                            )}
                         </div>
                         <div>
                             <Text className="block mb-2 text-gray-700">Link Name (Optional)</Text>
@@ -192,7 +208,7 @@ const AffiliateLinks = () => {
                 </Card>
 
                 {/* Affiliate Links List */}
-                <div className="space-y-6">
+                <div className="space-y-6 mt-6">
                     {loading && affiliateLinks.length === 0 ? (
                         <div className="text-center py-8">
                             <Spin size="large" />

@@ -84,39 +84,83 @@ class LinkManager {
     /**
      * Handle affiliate redirect
      */
-    public function handle_affiliate_redirect() {
-        global $wp_query;
+     /**
+      * Handle affiliate redirect - UPDATED VERSION
+      * Replace the handle_affiliate_redirect() method in your LinkManager class
+      */
+     public function handle_affiliate_redirect() {
+         global $wp_query;
 
-        // Debug: Check if query var exists
-        if ( isset( $wp_query->query_vars['affiliate_redirect'] ) ) {
-            $link_code = sanitize_text_field( $wp_query->query_vars['affiliate_redirect'] );
+         // Check if query var exists
+         if ( isset( $wp_query->query_vars['affiliate_redirect'] ) ) {
+             $link_code = sanitize_text_field( $wp_query->query_vars['affiliate_redirect'] );
 
-            // Debug log
-            error_log( 'Affiliate redirect triggered for code: ' . $link_code );
+             // Debug log
+             error_log( 'Affiliate redirect triggered for code: ' . $link_code );
 
-            // Find the affiliate link by code
-            $link_data = $this->get_link_by_affiliate_code( $link_code );
+             // Find the affiliate link by code
+             $link_data = $this->get_link_by_affiliate_code( $link_code );
 
-            if ( $link_data ) {
-                // Debug log
-                error_log( 'Link found, redirecting to: ' . $link_data['product_url'] );
+             if ( $link_data ) {
+                 // Debug log
+                 error_log( 'Link found, redirecting to: ' . $link_data['product_url'] );
 
-                // Track the click
-                $this->track_affiliate_click( $link_data['link_id'], $link_data['user_id'] );
+                 // Track the click
+                 $this->track_affiliate_click( $link_data['link_id'], $link_data['user_id'] );
 
-                // Redirect to the original URL
-                wp_redirect( $link_data['product_url'], 302 );
-                exit;
-            } else {
-                // Debug log
-                error_log( 'Link not found for code: ' . $link_code );
+                 // Build redirect URL with affiliate code as parameter
+                 $redirect_url = $link_data['product_url'];
 
-                // Redirect to home if link not found
-                wp_redirect( home_url(), 302 );
-                exit;
-            }
-        }
-    }
+                 // Add ref parameter to URL
+                 $separator = ( parse_url( $redirect_url, PHP_URL_QUERY ) == NULL ) ? '?' : '&';
+                 $redirect_url .= $separator . 'ref=' . urlencode( $link_code );
+
+                 // Redirect to the URL with ref parameter
+                 wp_redirect( $redirect_url, 302 );
+                 exit;
+             } else {
+                 // Debug log
+                 error_log( 'Link not found for code: ' . $link_code );
+
+                 // Redirect to home if link not found
+                 wp_redirect( home_url(), 302 );
+                 exit;
+             }
+         }
+     }
+//     public function handle_affiliate_redirect() {
+//         global $wp_query;
+//
+//         // Debug: Check if query var exists
+//         if ( isset( $wp_query->query_vars['affiliate_redirect'] ) ) {
+//             $link_code = sanitize_text_field( $wp_query->query_vars['affiliate_redirect'] );
+//
+//             // Debug log
+//             error_log( 'Affiliate redirect triggered for code: ' . $link_code );
+//
+//             // Find the affiliate link by code
+//             $link_data = $this->get_link_by_affiliate_code( $link_code );
+//
+//             if ( $link_data ) {
+//                 // Debug log
+//                 error_log( 'Link found, redirecting to: ' . $link_data['product_url'] );
+//
+//                 // Track the click
+//                 $this->track_affiliate_click( $link_data['link_id'], $link_data['user_id'] );
+//
+//                 // Redirect to the original URL
+//                 wp_redirect( $link_data['product_url'], 302 );
+//                 exit;
+//             } else {
+//                 // Debug log
+//                 error_log( 'Link not found for code: ' . $link_code );
+//
+//                 // Redirect to home if link not found
+//                 wp_redirect( home_url(), 302 );
+//                 exit;
+//             }
+//         }
+//     }
 
     /**
      * Generate affiliate link

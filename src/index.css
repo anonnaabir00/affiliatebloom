@@ -1,1 +1,11 @@
 @import "tailwindcss";
+
+.ant-btn {
+    padding: 0 !important;
+}
+
+.ant-input-affix-wrapper-lg {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    border-color: red !important;
+}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Form, Input, Button, Checkbox, Alert, Typography, Row, Col } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined, PhoneOutlined, GlobalOutlined } from '@ant-design/icons';
+import globalSettings from "../utils/globalSettings.js";
 import {fetchData} from "../services/fetchData.js";
 
 const { Title } = Typography;
@@ -47,17 +48,9 @@ const AuthRegister = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="flex items-center justify-center p-4">
             <div className="w-full max-w-2xl">
-                <div className="bg-white p-8 rounded-lg shadow-lg">
-                    <div className="text-center mb-8">
-                        <Title level={2} className="!mb-2">
-                            Partner Registration
-                        </Title>
-                        <p className="text-gray-600">
-                            Join our partner program and start earning
-                        </p>
-                    </div>
+                <div className="">
 
                     {/* Alert Message */}
                     {message.text && (
@@ -99,6 +92,7 @@ const AuthRegister = () => {
                                     <Input
                                         placeholder="Enter first name"
                                         disabled={loading}
+
                                     />
                                 </Form.Item>
                             </Col>
@@ -145,7 +139,6 @@ const AuthRegister = () => {
                             ]}
                         >
                             <Input
-                                prefix={<UserOutlined className="text-gray-400" />}
                                 placeholder="Enter username"
                                 disabled={loading}
                             />
@@ -167,51 +160,26 @@ const AuthRegister = () => {
                             ]}
                         >
                             <Input
-                                prefix={<MailOutlined className="text-gray-400" />}
                                 placeholder="Enter email address"
                                 disabled={loading}
                             />
                         </Form.Item>
 
-                        {/* Optional Fields */}
-                        <Row gutter={16}>
-                            <Col xs={24} sm={12}>
-                                <Form.Item
-                                    name="phone"
-                                    label="Phone Number (Optional)"
-                                    rules={[
-                                        {
-                                            pattern: /^[+]?[\d\s\-()]+$/,
-                                            message: 'Please enter a valid phone number!',
-                                        },
-                                    ]}
-                                >
-                                    <Input
-                                        prefix={<PhoneOutlined className="text-gray-400" />}
-                                        placeholder="Enter phone number"
-                                        disabled={loading}
-                                    />
-                                </Form.Item>
-                            </Col>
-                            <Col xs={24} sm={12}>
-                                <Form.Item
-                                    name="website"
-                                    label="Website URL (Optional)"
-                                    rules={[
-                                        {
-                                            type: 'url',
-                                            message: 'Please enter a valid website URL!',
-                                        },
-                                    ]}
-                                >
-                                    <Input
-                                        prefix={<GlobalOutlined className="text-gray-400" />}
-                                        placeholder="https://example.com"
-                                        disabled={loading}
-                                    />
-                                </Form.Item>
-                            </Col>
-                        </Row>
+                        <Form.Item
+                            name="phone"
+                            label="Phone Number"
+                            rules={[
+                                {
+                                    pattern: /^[+]?[\d\s\-()]+$/,
+                                    message: 'Please enter a valid phone number!',
+                                },
+                            ]}
+                        >
+                            <Input
+                                placeholder="Enter phone number"
+                                disabled={loading}
+                            />
+                        </Form.Item>
 
                         {/* Password Fields */}
                         <Row gutter={16}>
@@ -232,7 +200,6 @@ const AuthRegister = () => {
                                     hasFeedback
                                 >
                                     <Input.Password
-                                        prefix={<LockOutlined className="text-gray-400" />}
                                         placeholder="Enter password"
                                         disabled={loading}
                                     />
@@ -260,7 +227,6 @@ const AuthRegister = () => {
                                     hasFeedback
                                 >
                                     <Input.Password
-                                        prefix={<LockOutlined className="text-gray-400" />}
                                         placeholder="Confirm password"
                                         disabled={loading}
                                     />

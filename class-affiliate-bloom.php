@@ -69,6 +69,7 @@ final class AffiliateBloom {
 		AffiliateBloom\Frontend::init();
 		AffiliateBloom\Admin::init();
         AffiliateBloom\Ajax::init();
+        AffiliateBloom\API::init();
         AffiliateBloom\Application::init();
         AffiliateBloom\AdminApplications::init();
         AffiliateBloom\Actions::init();

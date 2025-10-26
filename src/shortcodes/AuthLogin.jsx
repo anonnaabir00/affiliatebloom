@@ -41,16 +41,7 @@ const AuthLogin = () => {
     return (
         <div className="min-h-screen flex items-center justify-center p-4">
             <div className="w-full max-w-md">
-                <div className="bg-white p-8 rounded-lg shadow-lg">
-                    <div className="text-center mb-8">
-                        <Title level={2} className="!mb-2">
-                            Partner Login
-                        </Title>
-                        <p className="text-gray-600">
-                            Sign in to your partner account
-                        </p>
-                    </div>
-
+                <div className="">
                     {/* Alert Message */}
                     {message.text && (
                         <Alert
