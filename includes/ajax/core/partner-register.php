@@ -124,7 +124,7 @@ class PartnerRegister {
         update_user_meta( $user_id, 'affiliate_website_url', $website );
         update_user_meta( $user_id, 'affiliate_payment_method', $payment_method );
         update_user_meta( $user_id, 'affiliate_paypal_email', $paypal_email );
-        update_user_meta( $user_id, 'affiliate_status', 'pending' );
+        update_user_meta( $user_id, 'affiliate_status', 'approved' );
         update_user_meta( $user_id, 'registration_date', current_time( 'mysql' ) );
         update_user_meta( $user_id, 'is_affiliate_partner', true );
 
@@ -147,7 +147,9 @@ class PartnerRegister {
             'bank_details' => $bank_details,
             'marketing_emails' => $marketing_emails,
             'application_date' => current_time('mysql'),
-            'status' => 'pending'
+            'status' => 'approved',
+            'reviewed_date' => current_time('mysql'),
+            'reviewed_by' => 1
         );
 
         // Save to affiliate applications table
@@ -165,8 +167,8 @@ class PartnerRegister {
             wp_set_auth_cookie( $user_id );
 
             wp_send_json_success( array(
-                'message' => __('Registration successful! Your affiliate application has been submitted and is pending review. We will notify you within 2-3 business days.', 'affiliate-bloom'),
-                'redirect_url' => home_url( '/affiliate-dashboard/' ),
+                'message' => __('Registration successful! Your affiliate account has been approved. You can start promoting products immediately.', 'affiliate-bloom'),
+                'redirect_url' => home_url(),
                 'application_id' => $application_id
             ));
         } else {
