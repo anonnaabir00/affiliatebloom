@@ -3,14 +3,14 @@
 	/**
 	 *
 	 * @link              https://affiliatebloom.com/
-	 * @since             1.0.3
+	 * @since             1.0.4
 	 * @package           Affiliate Bloom Plugin
 	 *
 	 * @wordpress-plugin
 	 * Plugin Name:       Affiliate Bloom
 	 * Plugin URI:        https://affiliatebloom.com/
 	 * Description:       Powerful affiliate marketing plugin with advanced tracking and management features
-	 * Version:           1.0.3
+	 * Version:           1.0.4
 	 * Author:            Affiliate Bloom
 	 * Author URI:        https://affiliatebloom.com/
 	 * License:           GPL-2.0+
@@ -44,7 +44,7 @@ final class AffiliateBloom {
 	}
 
 	public function define_constants() {
-		define( 'AFFILIATE_BLOOM_VERSION', '1.0.3' );
+		define( 'AFFILIATE_BLOOM_VERSION', '1.0.4' );
 		define( 'AFFILIATE_BLOOM_PLUGIN_FILE', __FILE__ );
 		define( 'AFFILIATE_BLOOM_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 		define( 'AFFILIATE_BLOOM_ROOT_DIR_PATH', plugin_dir_path( __FILE__ ) );
