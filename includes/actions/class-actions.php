@@ -1,6 +1,7 @@
 <?php
 namespace AffiliateBloom;
 use AffiliateBloom\BonusAfterLogin;
+use AffiliateBloom\LoginRestrict;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
@@ -11,6 +12,7 @@ class Actions {
     public static function init() {
         $self = new self();
         BonusAfterLogin::init();
+        LoginRestrict::init();
     }
 
     public function __construct() {

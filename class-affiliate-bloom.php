@@ -3,20 +3,20 @@
 	/**
 	 *
 	 * @link              https://affiliatebloom.com/
-	 * @since             1.0.2
+	 * @since             1.0.3
 	 * @package           Affiliate Bloom Plugin
 	 *
 	 * @wordpress-plugin
 	 * Plugin Name:       Affiliate Bloom
 	 * Plugin URI:        https://affiliatebloom.com/
 	 * Description:       Powerful affiliate marketing plugin with advanced tracking and management features
-	 * Version:           1.0.2
+	 * Version:           1.0.3
 	 * Author:            Affiliate Bloom
 	 * Author URI:        https://affiliatebloom.com/
 	 * License:           GPL-2.0+
 	 * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
 	 * Text Domain:       affiliate-bloom
-	 * Tested up to:      6.7
+	 * Tested up to:      6.9
 	 */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -44,7 +44,7 @@ final class AffiliateBloom {
 	}
 
 	public function define_constants() {
-		define( 'AFFILIATE_BLOOM_VERSION', '1.0.2' );
+		define( 'AFFILIATE_BLOOM_VERSION', '1.0.3' );
 		define( 'AFFILIATE_BLOOM_PLUGIN_FILE', __FILE__ );
 		define( 'AFFILIATE_BLOOM_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 		define( 'AFFILIATE_BLOOM_ROOT_DIR_PATH', plugin_dir_path( __FILE__ ) );
@@ -75,7 +75,6 @@ final class AffiliateBloom {
         AffiliateBloom\Actions::init();
 		AffiliateBloom\Shortcodes::init();
 // 		AffiliateBloom\API::init();
-// 		AffiliateBloom\Actions::init();
 	}
 
 	public function load_textdomain() {

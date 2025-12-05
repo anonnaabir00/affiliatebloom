@@ -17,7 +17,7 @@ const AffiliateLinks = () => {
     const [urlError, setUrlError] = useState('');
 
     const validateUrl = (url) => {
-        const allowedDomain = 'example.com'; // Change this to your specific domain
+        const allowedDomain = 'cloudwaysapps.com'; // Change this to your specific domain
 
         try {
             const urlObj = new URL(url);
