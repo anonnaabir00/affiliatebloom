@@ -66,15 +66,12 @@ final class AffiliateBloom {
 		AffiliateBloom\Autoload::init();
 		AffiliateBloom\Database::init();
 		AffiliateBloom\Enqueue::init();
-		AffiliateBloom\Frontend::init();
-		AffiliateBloom\Admin::init();
+// 		AffiliateBloom\Frontend::init();
         AffiliateBloom\Ajax::init();
         AffiliateBloom\API::init();
-        AffiliateBloom\Application::init();
         AffiliateBloom\AdminApplications::init();
         AffiliateBloom\Actions::init();
 		AffiliateBloom\Shortcodes::init();
-// 		AffiliateBloom\API::init();
 	}
 
 	public function load_textdomain() {

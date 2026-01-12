@@ -13,6 +13,19 @@ class PartnerLogin {
         add_action( 'wp_ajax_nopriv_affiliate_bloom_partner_login', array( $self, 'affiliate_bloom_partner_login' ) );
     }
 
+    public static function api_init() {
+            $self = new self();
+
+            add_action('rest_api_init', function() use ($self) {
+                // Get all backups
+                register_rest_route($self->namespace, '/backups', [
+                    'methods'             => 'GET',
+                    'callback'            => [$self, 'api_get_backups'],
+                    'permission_callback' => [$self, 'api_check_permission'],
+                ]);
+            });
+        }
+
     public function affiliate_bloom_partner_login() {
         // Verify nonce
 //         if ( ! wp_verify_nonce( $_POST['nonce'], 'affiliate_bloom_nonce' ) ) {

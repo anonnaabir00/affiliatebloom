@@ -128,39 +128,6 @@ class LinkManager {
              }
          }
      }
-//     public function handle_affiliate_redirect() {
-//         global $wp_query;
-//
-//         // Debug: Check if query var exists
-//         if ( isset( $wp_query->query_vars['affiliate_redirect'] ) ) {
-//             $link_code = sanitize_text_field( $wp_query->query_vars['affiliate_redirect'] );
-//
-//             // Debug log
-//             error_log( 'Affiliate redirect triggered for code: ' . $link_code );
-//
-//             // Find the affiliate link by code
-//             $link_data = $this->get_link_by_affiliate_code( $link_code );
-//
-//             if ( $link_data ) {
-//                 // Debug log
-//                 error_log( 'Link found, redirecting to: ' . $link_data['product_url'] );
-//
-//                 // Track the click
-//                 $this->track_affiliate_click( $link_data['link_id'], $link_data['user_id'] );
-//
-//                 // Redirect to the original URL
-//                 wp_redirect( $link_data['product_url'], 302 );
-//                 exit;
-//             } else {
-//                 // Debug log
-//                 error_log( 'Link not found for code: ' . $link_code );
-//
-//                 // Redirect to home if link not found
-//                 wp_redirect( home_url(), 302 );
-//                 exit;
-//             }
-//         }
-//     }
 
     /**
      * Generate affiliate link
@@ -417,29 +384,6 @@ class LinkManager {
             wp_send_json_success( array( 'message' => 'Link updated successfully.' ) );
         } else {
             wp_send_json_error( array( 'message' => 'Failed to update link.' ) );
-        }
-    }
-
-    /**
-     * Enqueue AJAX scripts
-     */
-    public function enqueue_scripts() {
-        if ( is_user_logged_in() ) {
-            wp_enqueue_script( 'affiliate-bloom-ajax', plugin_dir_url( __FILE__ ) . 'assets/js/affiliate-ajax.js', array( 'jquery' ), '1.0.0', true );
-
-            wp_localize_script( 'affiliate-bloom-ajax', 'affiliateBloom', array(
-                'ajaxurl' => admin_url( 'admin-ajax.php' ),
-                'nonce' => wp_create_nonce( 'affiliate_bloom_nonce' ),
-                'messages' => array(
-                    'success' => __( 'Success!', 'affiliate-bloom' ),
-                    'error' => __( 'An error occurred. Please try again.', 'affiliate-bloom' ),
-                    'invalid_url' => __( 'Please enter a valid URL.', 'affiliate-bloom' ),
-                    'unauthorized' => __( 'Unauthorized access.', 'affiliate-bloom' ),
-                    'link_created' => __( 'Affiliate link created successfully!', 'affiliate-bloom' ),
-                    'link_deleted' => __( 'Affiliate link deleted successfully!', 'affiliate-bloom' ),
-                    'confirm_delete' => __( 'Are you sure you want to delete this link?', 'affiliate-bloom' )
-                )
-            ) );
         }
     }
 
