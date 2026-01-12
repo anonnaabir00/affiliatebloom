@@ -161,15 +161,32 @@ class Dashboard {
 
         $user_id = $user->ID;
 
+        // Get MLM team stats
+        $mlm = MLMCommission::init();
+        $team_stats = $mlm->get_team_stats($user_id);
+        $mlm_earnings = $mlm->get_user_mlm_earnings($user_id);
+
         $stats = [
-            'total_clicks'      => $this->get_user_total_clicks($user_id),
-            'total_conversions' => $this->get_user_total_conversions($user_id),
-            'total_earnings'    => $this->get_user_total_earnings($user_id),
-            'pending_earnings'  => $this->get_user_pending_earnings($user_id),
-            'current_balance'   => $this->get_user_current_balance($user_id),
-            'total_links'       => $this->get_user_total_links($user_id),
-            'total_referrals'   => $this->get_user_total_referrals($user_id),
-            'conversion_rate'   => 0,
+            'total_clicks'       => $this->get_user_total_clicks($user_id),
+            'total_conversions'  => $this->get_user_total_conversions($user_id),
+            'total_earnings'     => $this->get_user_total_earnings($user_id),
+            'pending_earnings'   => $this->get_user_pending_earnings($user_id),
+            'current_balance'    => $this->get_user_current_balance($user_id),
+            'total_links'        => $this->get_user_total_links($user_id),
+            'total_referrals'    => $this->get_user_total_referrals($user_id),
+            'conversion_rate'    => 0,
+            // MLM Team stats
+            'team_stats' => [
+                'total_team_members' => $team_stats['total_team_members'],
+                'direct_referrals'   => $team_stats['direct_referrals'],
+                'team_by_level'      => $team_stats['team_by_level'],
+            ],
+            'mlm_earnings' => [
+                'total'    => $mlm_earnings['total'],
+                'pending'  => $mlm_earnings['pending'],
+                'approved' => $mlm_earnings['approved'],
+                'by_level' => $mlm_earnings['by_level'],
+            ],
         ];
 
         if ($stats['total_clicks'] > 0) {
@@ -514,7 +531,7 @@ class Dashboard {
         $conversions = $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM {$wpdb->prefix}affiliate_bloom_conversions
              WHERE user_id = %d
-             ORDER BY created_at DESC
+             ORDER BY conversion_date DESC
              LIMIT %d OFFSET %d",
             $user_id,
             $per_page,

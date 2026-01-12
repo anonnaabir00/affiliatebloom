@@ -4,6 +4,8 @@ use AffiliateBloom\JWTAuth;
 use AffiliateBloom\Dashboard;
 use AffiliateBloom\AffiliateLinksAPI;
 use AffiliateBloom\ConversionTracker;
+use AffiliateBloom\MLMCommission;
+use AffiliateBloom\MLMTeamAPI;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -16,6 +18,8 @@ class API {
         JWTAuth::init();
         Dashboard::init();
         AffiliateLinksAPI::init();
+        MLMCommission::init();
+        MLMTeamAPI::init();
         $instance = new self();
         return $instance;
     }

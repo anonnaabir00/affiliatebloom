@@ -103,6 +103,10 @@ class ReferralManager {
                 update_user_meta($user_id, 'referral_code_used', $referral_code);
                 update_user_meta($user_id, 'registration_source', 'referral');
 
+                // Set MLM sponsor relationship
+                $mlm = MLMCommission::init();
+                $mlm->set_user_sponsor($user_id, $referrer_id);
+
                 // Process referral bonus
                 $this->process_referral_bonus($referrer_id, $user_id);
 
