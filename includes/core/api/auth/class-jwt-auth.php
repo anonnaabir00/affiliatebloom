@@ -6,6 +6,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+require_once __DIR__ . '/class-jwt-login.php';
+require_once __DIR__ . '/class-jwt-register.php';
+
 /**
  * JWT Authentication Class for Affiliate Bloom
  */
@@ -16,30 +19,38 @@ class JWTAuth {
     private $token_expiry = 604800; // 7 days
     private $refresh_expiry = 2592000; // 30 days
 
+    private $login_handler;
+    private $register_handler;
+
     public function __construct() {
-        // Get or generate secret key
         $this->secret_key = $this->get_secret_key();
+        $this->login_handler = new JWTLogin($this);
+        $this->register_handler = new JWTRegister($this);
     }
 
     /**
      * Get or generate secret key
      */
     private function get_secret_key() {
-        // Check for defined constant first
         if (defined('AFFILIATE_BLOOM_JWT_SECRET')) {
             return AFFILIATE_BLOOM_JWT_SECRET;
         }
 
-        // Check for saved option
         $saved_key = get_option('affiliate_bloom_jwt_secret');
 
         if (!$saved_key) {
-            // Generate new key
             $saved_key = wp_generate_password(64, true, true);
             update_option('affiliate_bloom_jwt_secret', $saved_key);
         }
 
         return $saved_key;
+    }
+
+    /**
+     * Get token expiry time
+     */
+    public function get_token_expiry() {
+        return $this->token_expiry;
     }
 
     /**
@@ -49,23 +60,11 @@ class JWTAuth {
         $self = new self();
 
         add_action('rest_api_init', function() use ($self) {
-            // Login endpoint - generate token
-            register_rest_route('affiliate-bloom/v1', '/auth/login', [
-                'methods'             => 'POST',
-                'callback'            => [$self, 'login'],
-                'permission_callback' => '__return_true',
-                'args'                => [
-                    'email' => [
-                        'required'          => true,
-                        'type'              => 'string',
-                        'sanitize_callback' => 'sanitize_text_field',
-                    ],
-                    'password' => [
-                        'required' => true,
-                        'type'     => 'string',
-                    ],
-                ],
-            ]);
+            // Login endpoint
+            register_rest_route('affiliate-bloom/v1', '/auth/login', $self->login_handler->get_route_config());
+
+            // Register endpoint
+            register_rest_route('affiliate-bloom/v1', '/auth/register', $self->register_handler->get_route_config());
 
             // Validate token endpoint
             register_rest_route('affiliate-bloom/v1', '/auth/validate', [
@@ -95,75 +94,6 @@ class JWTAuth {
                 'permission_callback' => [$self, 'authenticate_request'],
             ]);
         });
-    }
-
-    /**
-     * Login endpoint - Generate JWT token
-     */
-    public function login(\WP_REST_Request $request) {
-        $email    = sanitize_text_field($request->get_param('email'));
-        $password = $request->get_param('password');
-
-        if (empty($email) || empty($password)) {
-            return new \WP_REST_Response([
-                'success' => false,
-                'message' => 'Email and password are required',
-            ], 400);
-        }
-
-        // Try to get user by email first
-        $user = get_user_by('email', $email);
-
-        // If not found, try by username
-        if (!$user) {
-            $user = get_user_by('login', $email);
-        }
-
-        // If user not found
-        if (!$user) {
-            return new \WP_REST_Response([
-                'success' => false,
-                'message' => 'Invalid email or password',
-            ], 401);
-        }
-
-        // Check password
-        if (!wp_check_password($password, $user->data->user_pass, $user->ID)) {
-            return new \WP_REST_Response([
-                'success' => false,
-                'message' => 'Invalid email or password',
-            ], 401);
-        }
-
-        // Check if user is affiliate partner (optional)
-        $is_partner = get_user_meta($user->ID, 'is_affiliate_partner', true);
-        if (!$is_partner) {
-            // Set user as partner
-            update_user_meta($user->ID, 'is_affiliate_partner', true);
-        }
-
-        // Generate tokens
-        $token = $this->generate_token($user);
-        $refresh_token = $this->generate_refresh_token($user);
-
-        return new \WP_REST_Response([
-            'success' => true,
-            'message' => 'Login successful!',
-            'data'    => [
-                'token'         => $token,
-                'refresh_token' => $refresh_token,
-                'expires_in'    => $this->token_expiry,
-                'user'          => [
-                    'id'           => $user->ID,
-                    'name'         => $user->display_name,
-                    'email'        => $user->user_email,
-                    'username'     => $user->user_login,
-                    'affiliate_id' => get_user_meta($user->ID, 'affiliate_id', true),
-                    'phone'        => get_user_meta($user->ID, 'phone_number', true),
-                    'zilla'        => get_user_meta($user->ID, 'zilla', true),
-                ],
-            ],
-        ], 200);
     }
 
     /**
@@ -229,7 +159,6 @@ class JWTAuth {
             ], 404);
         }
 
-        // Generate new tokens
         $new_token = $this->generate_token($user);
         $new_refresh_token = $this->generate_refresh_token($user);
 
@@ -276,9 +205,6 @@ class JWTAuth {
      * Logout endpoint
      */
     public function logout_endpoint(\WP_REST_Request $request) {
-        // Optionally invalidate the token here by storing it in a blacklist
-        // For now, just return success as JWT is stateless
-
         return new \WP_REST_Response([
             'success' => true,
             'message' => 'Logged out successfully',
@@ -332,7 +258,6 @@ class JWTAuth {
         try {
             $decoded = $this->decode($token);
 
-            // Check if token has expired
             if (isset($decoded->exp) && $decoded->exp < time()) {
                 return new \WP_Error(
                     'token_expired',
@@ -341,7 +266,6 @@ class JWTAuth {
                 );
             }
 
-            // Validate issuer
             if (!isset($decoded->iss) || $decoded->iss !== get_bloginfo('url')) {
                 return new \WP_Error(
                     'invalid_issuer',
@@ -350,7 +274,6 @@ class JWTAuth {
                 );
             }
 
-            // Check if it's a refresh token when expected
             if ($is_refresh && (!isset($decoded->type) || $decoded->type !== 'refresh')) {
                 return new \WP_Error(
                     'invalid_token_type',
@@ -390,7 +313,6 @@ class JWTAuth {
             return $decoded;
         }
 
-        // Check if user still exists
         $user = get_user_by('id', $decoded->data->user_id);
 
         if (!$user) {
@@ -401,7 +323,6 @@ class JWTAuth {
             );
         }
 
-        // Authentication successful
         return true;
     }
 
@@ -412,7 +333,6 @@ class JWTAuth {
         $auth_header = $request->get_header('Authorization');
 
         if (!$auth_header) {
-            // Try lowercase
             $auth_header = $request->get_header('authorization');
         }
 
@@ -420,7 +340,6 @@ class JWTAuth {
             return null;
         }
 
-        // Extract token from "Bearer TOKEN" format
         if (preg_match('/Bearer\s+(.*)$/i', $auth_header, $matches)) {
             return trim($matches[1]);
         }
@@ -463,7 +382,6 @@ class JWTAuth {
 
         list($header_encoded, $payload_encoded, $signature_encoded) = $parts;
 
-        // Verify signature
         $signature = hash_hmac(
             'sha256',
             $header_encoded . '.' . $payload_encoded,
@@ -476,7 +394,6 @@ class JWTAuth {
             throw new \Exception('Invalid token signature');
         }
 
-        // Decode payload
         $payload = json_decode($this->base64url_decode($payload_encoded));
 
         if (!$payload) {
