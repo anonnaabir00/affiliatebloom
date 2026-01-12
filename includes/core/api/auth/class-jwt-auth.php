@@ -186,17 +186,36 @@ class JWTAuth {
             ], 404);
         }
 
+        // Get or create referral code
+        $referral_code = get_user_meta($user->ID, 'referral_code', true);
+        if (empty($referral_code)) {
+            $referral_code = 'REF' . $user->ID . '_' . wp_generate_password(6, false, false);
+            update_user_meta($user->ID, 'referral_code', $referral_code);
+        }
+
+        // Get affiliate code
+        $affiliate_code = get_user_meta($user->ID, 'affiliate_code', true);
+        if (empty($affiliate_code)) {
+            $affiliate_code = 'AFF' . $user->ID . '_' . wp_generate_password(6, false, false);
+            update_user_meta($user->ID, 'affiliate_code', $affiliate_code);
+        }
+
         return new \WP_REST_Response([
             'success' => true,
             'data'    => [
-                'id'           => $user->ID,
-                'name'         => $user->display_name,
-                'email'        => $user->user_email,
-                'username'     => $user->user_login,
-                'phone'        => get_user_meta($user->ID, 'phone_number', true),
-                'zilla'        => get_user_meta($user->ID, 'zilla', true),
-                'affiliate_id' => get_user_meta($user->ID, 'affiliate_id', true),
-                'role'         => isset($user->roles[0]) ? $user->roles[0] : '',
+                'id'              => $user->ID,
+                'name'            => $user->display_name,
+                'email'           => $user->user_email,
+                'username'        => $user->user_login,
+                'phone'           => get_user_meta($user->ID, 'phone_number', true),
+                'zilla'           => get_user_meta($user->ID, 'zilla', true),
+                'affiliate_id'    => get_user_meta($user->ID, 'affiliate_id', true),
+                'affiliate_code'  => $affiliate_code,
+                'referral_code'   => $referral_code,
+                'referral_url'    => add_query_arg('ref', $referral_code, AffiliateHelper::get_frontend_base_url()),
+                'affiliate_status' => get_user_meta($user->ID, 'affiliate_status', true),
+                'current_balance' => floatval(get_user_meta($user->ID, 'affiliate_balance', true) ?: 0),
+                'role'            => isset($user->roles[0]) ? $user->roles[0] : '',
             ],
         ], 200);
     }

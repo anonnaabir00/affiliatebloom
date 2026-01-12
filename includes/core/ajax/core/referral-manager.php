@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class ReferralManager {
 
-    private $referral_bonus = 10.00; // Bonus amount for successful referral
+    private $referral_bonus = 0.00; // Account opening bonus disabled
 
     public static function init() {
         $instance = new self();
@@ -25,6 +25,7 @@ class ReferralManager {
     private function init_hooks() {
         add_action('user_register', array($this, 'handle_user_registration'));
         add_action('init', array($this, 'capture_referral_code'));
+        add_action('affiliate_bloom_user_referred', array($this, 'handle_user_referred'), 10, 3);
         add_action('wp_ajax_affiliate_bloom_get_referral_stats', array($this, 'get_referral_stats'));
         add_action('wp_ajax_affiliate_bloom_get_referral_history', array($this, 'get_referral_history'));
     }
@@ -103,6 +104,10 @@ class ReferralManager {
                 update_user_meta($user_id, 'referral_code_used', $referral_code);
                 update_user_meta($user_id, 'registration_source', 'referral');
 
+                // Set MLM sponsor relationship
+                $mlm = MLMCommission::init();
+                $mlm->set_user_sponsor($user_id, $referrer_id);
+
                 // Process referral bonus
                 $this->process_referral_bonus($referrer_id, $user_id);
 
@@ -110,6 +115,20 @@ class ReferralManager {
                 $this->clear_stored_referral_code();
             }
         }
+    }
+
+    /**
+     * Handle referrals created via API registration (JWT)
+     */
+    public function handle_user_referred($referrer_id, $user_id, $referral_code) {
+        if (empty($referrer_id) || empty($user_id) || $referrer_id == $user_id) {
+            return;
+        }
+
+        $mlm = MLMCommission::init();
+        $mlm->set_user_sponsor($user_id, $referrer_id);
+
+        $this->process_referral_bonus($referrer_id, $user_id);
     }
 
     /**
@@ -121,24 +140,29 @@ class ReferralManager {
             return;
         }
 
-        // Add bonus to referrer's account
-        $current_balance = get_user_meta($referrer_id, 'affiliate_balance', true);
-        $current_balance = $current_balance ? floatval($current_balance) : 0;
-        $new_balance = $current_balance + $this->referral_bonus;
+        $bonus_amount = floatval($this->referral_bonus);
+        if ($bonus_amount > 0) {
+            // Add bonus to referrer's account
+            $current_balance = get_user_meta($referrer_id, 'affiliate_balance', true);
+            $current_balance = $current_balance ? floatval($current_balance) : 0;
+            $new_balance = $current_balance + $bonus_amount;
 
-        update_user_meta($referrer_id, 'affiliate_balance', $new_balance);
+            update_user_meta($referrer_id, 'affiliate_balance', $new_balance);
 
-        // Log the transaction
-        $this->log_referral_transaction($referrer_id, $referred_user_id, $this->referral_bonus);
+            // Log the transaction
+            $this->log_referral_transaction($referrer_id, $referred_user_id, $bonus_amount);
+        }
 
         // Mark as processed
         update_user_meta($referred_user_id, 'referral_bonus_processed', true);
 
         // Add simple referral record
-        $this->add_referral_record($referrer_id, $referred_user_id);
+        $this->add_referral_record($referrer_id, $referred_user_id, $bonus_amount);
 
-        // Fire action hook for extensibility
-        do_action('affiliate_bloom_referral_bonus_added', $referrer_id, $referred_user_id, $this->referral_bonus);
+        if ($bonus_amount > 0) {
+            // Fire action hook for extensibility
+            do_action('affiliate_bloom_referral_bonus_added', $referrer_id, $referred_user_id, $bonus_amount);
+        }
     }
 
     /**
@@ -160,7 +184,7 @@ class ReferralManager {
      */
     public function generate_referral_url($user_id, $target_url = '') {
         if (empty($target_url)) {
-            $target_url = home_url();
+            $target_url = AffiliateHelper::get_frontend_base_url();
         }
 
         $referral_code = $this->get_user_referral_code($user_id);
@@ -236,19 +260,20 @@ class ReferralManager {
     /**
      * Add referral record
      */
-    private function add_referral_record($referrer_id, $referred_user_id) {
+    private function add_referral_record($referrer_id, $referred_user_id, $bonus_amount = null) {
         $referrals = get_user_meta($referrer_id, 'referral_history', true);
         if (!is_array($referrals)) {
             $referrals = array();
         }
 
         $referred_user = get_user_by('ID', $referred_user_id);
+        $bonus_amount = $bonus_amount !== null ? floatval($bonus_amount) : floatval($this->referral_bonus);
         $referral = array(
             'id' => uniqid('ref_'),
             'referred_user_id' => $referred_user_id,
             'referred_username' => $referred_user ? $referred_user->user_login : 'Unknown',
             'referred_email' => $referred_user ? $referred_user->user_email : '',
-            'bonus_amount' => $this->referral_bonus,
+            'bonus_amount' => $bonus_amount,
             'created_date' => current_time('mysql')
         );
 

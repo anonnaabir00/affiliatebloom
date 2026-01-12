@@ -133,8 +133,17 @@ class ConversionTracker {
 
         $conversion_id = $wpdb->insert_id;
 
-        // Update user's pending balance
+        // Update user's pending balance (direct commission)
         $this->update_user_pending_balance( $link_data['user_id'], $commission_amount );
+
+        // Process MLM multi-level commissions
+        $mlm = MLMCommission::init();
+        $mlm_commissions = $mlm->process_mlm_commissions(
+            $conversion_id,
+            $link_data['user_id'],
+            $commission_amount,
+            $order_id
+        );
 
         return rest_ensure_response( array(
             'success' => true,
@@ -143,7 +152,8 @@ class ConversionTracker {
                 'conversion_id' => $conversion_id,
                 'affiliate_code' => $affiliate_code,
                 'user_id' => $link_data['user_id'],
-                'commission_amount' => $commission_amount
+                'commission_amount' => $commission_amount,
+                'mlm_commissions' => $mlm_commissions
             )
         ) );
     }

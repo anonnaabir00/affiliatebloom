@@ -165,11 +165,13 @@ class Actions {
 
             switch ($transaction['type']) {
                 case 'commission':
+                case 'mlm_commission':
                     $commissions += $amount;
                     break;
                 case 'login_bonus':
                 case 'welcome_bonus':
                 case 'manual_bonus':
+                case 'referral_bonus':
                     $bonuses += $amount;
                     break;
                 case 'withdrawal':

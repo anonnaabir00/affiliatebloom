@@ -65,6 +65,7 @@ class Enqueue {
           'nonce' => wp_create_nonce('affiliate_bloom_nonce'),
           'is_affiliate' => $this->is_user_affiliate(),
           'user_id' => get_current_user_id(),
+          'frontend_base_url' => AffiliateHelper::get_frontend_base_url(),
           'login_bonus' => $login_bonus_data, // Add login bonus data here
           'messages' => array(
               'generating' => __('Generating...', 'affiliate-bloom'),

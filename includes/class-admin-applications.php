@@ -14,6 +14,7 @@ class AdminApplications {
 
   public function __construct() {
       add_action('admin_menu', array($this, 'add_admin_menu'));
+      add_action('admin_init', array($this, 'register_settings'));
       add_action('wp_ajax_approve_affiliate_application', array($this, 'approve_application'));
       add_action('wp_ajax_reject_affiliate_application', array($this, 'reject_application'));
       add_action('wp_ajax_get_application_details', array($this, 'get_application_details'));
@@ -47,6 +48,73 @@ class AdminApplications {
           'affiliate-bloom-affiliates',
           array($this, 'affiliates_page')
       );
+
+      add_submenu_page(
+          'affiliate-bloom',
+          __('Settings', 'affiliate-bloom'),
+          __('Settings', 'affiliate-bloom'),
+          'manage_options',
+          'affiliate-bloom-settings',
+          array($this, 'settings_page')
+      );
+  }
+
+  public function register_settings() {
+      register_setting(
+          'affiliate_bloom_settings',
+          'affiliate_bloom_frontend_base_url',
+          array(
+              'type' => 'string',
+              'sanitize_callback' => 'esc_url_raw',
+              'default' => '',
+          )
+      );
+
+      add_settings_section(
+          'affiliate_bloom_referral_settings',
+          __('Referral Settings', 'affiliate-bloom'),
+          '__return_false',
+          'affiliate-bloom-settings'
+      );
+
+      add_settings_field(
+          'affiliate_bloom_frontend_base_url',
+          __('Frontend Base URL', 'affiliate-bloom'),
+          array($this, 'render_frontend_base_url_field'),
+          'affiliate-bloom-settings',
+          'affiliate_bloom_referral_settings'
+      );
+  }
+
+  public function render_frontend_base_url_field() {
+      $value = get_option('affiliate_bloom_frontend_base_url', '');
+      ?>
+      <input
+          type="url"
+          class="regular-text"
+          name="affiliate_bloom_frontend_base_url"
+          value="<?php echo esc_attr($value); ?>"
+          placeholder="https://example.com/"
+      />
+      <p class="description">
+          <?php _e('Base URL used for referral links. Leave blank to use the site URL.', 'affiliate-bloom'); ?>
+      </p>
+      <?php
+  }
+
+  public function settings_page() {
+      ?>
+      <div class="wrap">
+          <h1><?php _e('Affiliate Bloom Settings', 'affiliate-bloom'); ?></h1>
+          <form method="post" action="options.php">
+              <?php
+              settings_fields('affiliate_bloom_settings');
+              do_settings_sections('affiliate-bloom-settings');
+              submit_button();
+              ?>
+          </form>
+      </div>
+      <?php
   }
 
   public function admin_dashboard_page() {

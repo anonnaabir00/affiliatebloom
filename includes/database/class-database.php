@@ -87,9 +87,45 @@ class Database {
             KEY user_id (user_id)
         ) $charset_collate;";
 
+        // Affiliate hierarchy table for MLM/team structure
+        $hierarchy_table = $wpdb->prefix . 'affiliate_bloom_hierarchy';
+        $hierarchy_sql = "CREATE TABLE IF NOT EXISTS $hierarchy_table (
+            id int(11) NOT NULL AUTO_INCREMENT,
+            user_id int(11) NOT NULL,
+            sponsor_id int(11) NOT NULL,
+            level int(11) DEFAULT 1,
+            created_date datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY user_id (user_id),
+            KEY sponsor_id (sponsor_id),
+            KEY level (level)
+        ) $charset_collate;";
+
+        // MLM commissions table for tracking multi-level commissions
+        $mlm_commissions_table = $wpdb->prefix . 'affiliate_bloom_mlm_commissions';
+        $mlm_commissions_sql = "CREATE TABLE IF NOT EXISTS $mlm_commissions_table (
+            id int(11) NOT NULL AUTO_INCREMENT,
+            conversion_id int(11) NOT NULL,
+            order_id int(11),
+            beneficiary_id int(11) NOT NULL,
+            source_user_id int(11) NOT NULL,
+            level int(11) NOT NULL,
+            commission_rate decimal(5,2) NOT NULL,
+            commission_amount decimal(10,2) NOT NULL,
+            status varchar(20) DEFAULT 'pending',
+            created_date datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY conversion_id (conversion_id),
+            KEY beneficiary_id (beneficiary_id),
+            KEY source_user_id (source_user_id),
+            KEY level (level)
+        ) $charset_collate;";
+
         require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
         dbDelta( $clicks_sql );
         dbDelta( $conversions_sql );
+        dbDelta( $hierarchy_sql );
+        dbDelta( $mlm_commissions_sql );
     }
 
     /**
