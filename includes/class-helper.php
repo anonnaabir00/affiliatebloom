@@ -35,6 +35,24 @@ class AffiliateHelper {
   }
 
   /**
+   * Get frontend base URL for referral links
+   */
+  public static function get_frontend_base_url() {
+      $frontend_url = get_option('affiliate_bloom_frontend_base_url', '');
+      $frontend_url = is_string($frontend_url) ? trim($frontend_url) : '';
+
+      if ($frontend_url !== '') {
+          $frontend_url = esc_url_raw($frontend_url);
+      }
+
+      if (empty($frontend_url)) {
+          $frontend_url = home_url('/');
+      }
+
+      return apply_filters('affiliate_bloom_frontend_base_url', $frontend_url);
+  }
+
+  /**
    * Get user IP address
    */
   public static function get_user_ip() {

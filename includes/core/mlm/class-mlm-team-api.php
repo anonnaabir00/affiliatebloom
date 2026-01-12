@@ -52,6 +52,18 @@ class MLMTeamAPI {
                     'type' => 'integer',
                     'default' => 0,
                     'sanitize_callback' => 'absint'
+                ),
+                'start_date' => array(
+                    'required' => false,
+                    'type' => 'string',
+                    'sanitize_callback' => 'sanitize_text_field',
+                    'description' => 'Filter orders/earnings from this date (YYYY-MM-DD)'
+                ),
+                'end_date' => array(
+                    'required' => false,
+                    'type' => 'string',
+                    'sanitize_callback' => 'sanitize_text_field',
+                    'description' => 'Filter orders/earnings up to this date (YYYY-MM-DD)'
                 )
             )
         ) );
@@ -162,8 +174,11 @@ class MLMTeamAPI {
         $limit = $request->get_param( 'limit' ) ?: 50;
         $offset = $request->get_param( 'offset' ) ?: 0;
 
+        $start_date = $request->get_param( 'start_date' );
+        $end_date = $request->get_param( 'end_date' );
+
         $mlm = MLMCommission::init();
-        $members = $mlm->get_team_members_detailed( $user_id, $level, $limit, $offset );
+        $members = $mlm->get_team_members_detailed( $user_id, $level, $limit, $offset, $start_date, $end_date );
 
         return rest_ensure_response( array(
             'success' => true,

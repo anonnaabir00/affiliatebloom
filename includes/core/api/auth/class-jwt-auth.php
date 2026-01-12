@@ -212,7 +212,7 @@ class JWTAuth {
                 'affiliate_id'    => get_user_meta($user->ID, 'affiliate_id', true),
                 'affiliate_code'  => $affiliate_code,
                 'referral_code'   => $referral_code,
-                'referral_url'    => add_query_arg('ref', $referral_code, home_url()),
+                'referral_url'    => add_query_arg('ref', $referral_code, AffiliateHelper::get_frontend_base_url()),
                 'affiliate_status' => get_user_meta($user->ID, 'affiliate_status', true),
                 'current_balance' => floatval(get_user_meta($user->ID, 'affiliate_balance', true) ?: 0),
                 'role'            => isset($user->roles[0]) ? $user->roles[0] : '',

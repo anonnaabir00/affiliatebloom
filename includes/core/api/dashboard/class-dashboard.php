@@ -466,13 +466,13 @@ class Dashboard {
         $balance = get_user_meta($user_id, 'affiliate_balance', true);
         $balance = $balance ? floatval($balance) : 0;
 
-        $referral_bonus = get_option('affiliate_bloom_referral_bonus', 10.00);
+        $referral_bonus = 0.00;
 
         return new \WP_REST_Response([
             'success' => true,
             'data'    => [
                 'referral_code'      => $referral_code,
-                'referral_url'       => add_query_arg('ref', $referral_code, home_url()),
+                'referral_url'       => add_query_arg('ref', $referral_code, AffiliateHelper::get_frontend_base_url()),
                 'total_referrals'    => count($referrals),
                 'total_earnings'     => $balance,
                 'bonus_per_referral' => floatval($referral_bonus),

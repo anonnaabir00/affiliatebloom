@@ -387,7 +387,7 @@ class MLMCommission {
     /**
      * Get detailed team members with user info
      */
-    public function get_team_members_detailed( $user_id, $level = null, $limit = 50, $offset = 0 ) {
+    public function get_team_members_detailed( $user_id, $level = null, $limit = 50, $offset = 0, $start_date = null, $end_date = null ) {
         $all_downline = $this->get_all_downline( $user_id );
 
         if ( $level !== null ) {
@@ -402,14 +402,24 @@ class MLMCommission {
 
         // Enrich with user data
         $members = array();
+        $start_date = $this->normalize_date( $start_date, false );
+        $end_date = $this->normalize_date( $end_date, true );
+
         foreach ( $all_downline as $member ) {
             $user = get_user_by( 'ID', $member['user_id'] );
             if ( $user ) {
+                $order_stats = $this->get_order_stats_for_user( $member['user_id'], $start_date, $end_date );
                 $members[] = array(
                     'user_id' => $member['user_id'],
                     'username' => $user->user_login,
                     'email' => $user->user_email,
                     'display_name' => $user->display_name,
+                    'phone_number' => $this->get_user_phone_number( $member['user_id'] ),
+                    'referral_earning' => $this->get_referral_earnings_for_user( $member['user_id'], $start_date, $end_date ),
+                    'team_size' => $this->get_team_size_for_user( $member['user_id'] ),
+                    'purchased_value' => $order_stats['purchased_value'],
+                    'cancelled_orders' => $order_stats['cancelled_orders'],
+                    'cancelled_value' => $order_stats['cancelled_value'],
                     'level' => $member['level'],
                     'sponsor_id' => $member['sponsor_id'],
                     'joined_date' => $member['created_date'],
@@ -423,6 +433,121 @@ class MLMCommission {
             'total' => $total,
             'limit' => $limit,
             'offset' => $offset
+        );
+    }
+
+    private function normalize_date( $date, $end_of_day = false ) {
+        if ( empty( $date ) ) {
+            return null;
+        }
+
+        $timestamp = strtotime( $date );
+        if ( ! $timestamp ) {
+            return null;
+        }
+
+        $formatted = wp_date( 'Y-m-d', $timestamp );
+        return $formatted . ( $end_of_day ? ' 23:59:59' : ' 00:00:00' );
+    }
+
+    private function get_user_phone_number( $user_id ) {
+        $phone = get_user_meta( $user_id, 'phone_number', true );
+        if ( empty( $phone ) ) {
+            $phone = get_user_meta( $user_id, 'affiliate_phone', true );
+        }
+
+        return $phone ? $phone : '';
+    }
+
+    private function get_referral_earnings_for_user( $user_id, $start_date = null, $end_date = null ) {
+        global $wpdb;
+
+        $sql = "SELECT SUM(commission_amount) FROM {$wpdb->prefix}affiliate_bloom_conversions WHERE user_id = %d";
+        $params = array( $user_id );
+
+        if ( ! empty( $start_date ) ) {
+            $sql .= " AND conversion_date >= %s";
+            $params[] = $start_date;
+        }
+
+        if ( ! empty( $end_date ) ) {
+            $sql .= " AND conversion_date <= %s";
+            $params[] = $end_date;
+        }
+
+        $query = $wpdb->prepare( $sql, $params );
+        $total = $wpdb->get_var( $query );
+
+        return floatval( $total ?: 0 );
+    }
+
+    private function get_team_size_for_user( $user_id ) {
+        $downline_counts = $this->get_downline_count_by_level( $user_id );
+        return array_sum( $downline_counts );
+    }
+
+    private function get_order_stats_for_user( $user_id, $start_date = null, $end_date = null ) {
+        if ( ! function_exists( 'wc_get_orders' ) ) {
+            return array(
+                'purchased_value' => 0.0,
+                'cancelled_orders' => 0,
+                'cancelled_value' => 0.0
+            );
+        }
+
+        $date_query = null;
+        if ( $start_date || $end_date ) {
+            $date_query = array();
+            if ( $start_date ) {
+                $date_query['after'] = $start_date;
+            }
+            if ( $end_date ) {
+                $date_query['before'] = $end_date;
+            }
+            $date_query['inclusive'] = true;
+        }
+
+        $paid_statuses = function_exists( 'wc_get_is_paid_statuses' ) ? wc_get_is_paid_statuses() : array( 'processing', 'completed' );
+        $paid_statuses = apply_filters( 'affiliate_bloom_purchased_order_statuses', $paid_statuses );
+
+        $cancelled_statuses = apply_filters( 'affiliate_bloom_cancelled_order_statuses', array( 'cancelled' ) );
+
+        $purchased_orders = wc_get_orders( array(
+            'customer_id' => $user_id,
+            'status' => $paid_statuses,
+            'limit' => -1,
+            'return' => 'ids',
+            'date_created' => $date_query
+        ) );
+
+        $cancelled_orders = wc_get_orders( array(
+            'customer_id' => $user_id,
+            'status' => $cancelled_statuses,
+            'limit' => -1,
+            'return' => 'ids',
+            'date_created' => $date_query
+        ) );
+
+        $purchased_value = 0.0;
+        foreach ( $purchased_orders as $order_id ) {
+            $order = wc_get_order( $order_id );
+            if ( $order ) {
+                $purchased_value += floatval( $order->get_total() );
+            }
+        }
+
+        $cancelled_value = 0.0;
+        foreach ( $cancelled_orders as $order_id ) {
+            $order = wc_get_order( $order_id );
+            if ( $order ) {
+                $cancelled_value += floatval( $order->get_total() );
+            }
+        }
+
+        return array(
+            'purchased_value' => $purchased_value,
+            'cancelled_orders' => count( $cancelled_orders ),
+            'cancelled_value' => $cancelled_value
         );
     }
 
@@ -516,8 +641,10 @@ class MLMCommission {
         $level = isset( $_POST['level'] ) ? intval( $_POST['level'] ) : null;
         $limit = isset( $_POST['limit'] ) ? intval( $_POST['limit'] ) : 50;
         $offset = isset( $_POST['offset'] ) ? intval( $_POST['offset'] ) : 0;
+        $start_date = isset( $_POST['start_date'] ) ? sanitize_text_field( $_POST['start_date'] ) : null;
+        $end_date = isset( $_POST['end_date'] ) ? sanitize_text_field( $_POST['end_date'] ) : null;
 
-        $members = $this->get_team_members_detailed( $user_id, $level, $limit, $offset );
+        $members = $this->get_team_members_detailed( $user_id, $level, $limit, $offset, $start_date, $end_date );
 
         wp_send_json_success( array( 'team' => $members ) );
     }

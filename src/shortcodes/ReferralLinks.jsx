@@ -72,6 +72,7 @@ const ReferralDashboard = () => {
     };
 
     const generateReferralUrl = (targetPath = '') => {
+        const baseUrl = affiliateBloom?.frontend_base_url || window.location.origin;
         let fullUrl;
 
         if (targetPath && targetPath.startsWith('http')) {
@@ -79,10 +80,15 @@ const ReferralDashboard = () => {
             fullUrl = targetPath;
         } else if (targetPath) {
             // Relative path provided
-            fullUrl = window.location.origin + targetPath;
+            try {
+                fullUrl = new URL(targetPath, baseUrl).toString();
+            } catch {
+                const separator = baseUrl.endsWith('/') || targetPath.startsWith('/') ? '' : '/';
+                fullUrl = `${baseUrl}${separator}${targetPath}`;
+            }
         } else {
             // No path provided, use current origin
-            fullUrl = window.location.origin;
+            fullUrl = baseUrl;
         }
 
         try {
