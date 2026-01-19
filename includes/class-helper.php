@@ -53,6 +53,24 @@ class AffiliateHelper {
   }
 
   /**
+   * Get base URL for short affiliate links.
+   */
+  public static function get_shortlink_base_url() {
+      $shortlink_url = get_option('affiliate_bloom_shortlink_base_url', '');
+      $shortlink_url = is_string($shortlink_url) ? trim($shortlink_url) : '';
+
+      if ($shortlink_url !== '') {
+          $shortlink_url = esc_url_raw($shortlink_url);
+      }
+
+      if (empty($shortlink_url)) {
+          $shortlink_url = home_url('/');
+      }
+
+      return apply_filters('affiliate_bloom_shortlink_base_url', $shortlink_url);
+  }
+
+  /**
    * Get user IP address
    */
   public static function get_user_ip() {

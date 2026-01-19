@@ -319,7 +319,8 @@ class Dashboard {
 
         // Generate unique link code
         $link_code = $this->generate_unique_link_code($user_id);
-        $affiliate_url = home_url('/go/' . $link_code);
+        $base_url = AffiliateHelper::get_shortlink_base_url();
+        $affiliate_url = rtrim($base_url, '/') . '/go/' . $link_code;
 
         $post_data = [
             'post_title'  => $link_name ?: ('Affiliate Link - ' . ($product_url ?: 'Product ID: ' . $product_id)),

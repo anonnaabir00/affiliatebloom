@@ -69,6 +69,15 @@ class AdminApplications {
               'default' => '',
           )
       );
+      register_setting(
+          'affiliate_bloom_settings',
+          'affiliate_bloom_shortlink_base_url',
+          array(
+              'type' => 'string',
+              'sanitize_callback' => 'esc_url_raw',
+              'default' => '',
+          )
+      );
 
       add_settings_section(
           'affiliate_bloom_referral_settings',
@@ -81,6 +90,13 @@ class AdminApplications {
           'affiliate_bloom_frontend_base_url',
           __('Frontend Base URL', 'affiliate-bloom'),
           array($this, 'render_frontend_base_url_field'),
+          'affiliate-bloom-settings',
+          'affiliate_bloom_referral_settings'
+      );
+      add_settings_field(
+          'affiliate_bloom_shortlink_base_url',
+          __('Shortlink Base URL', 'affiliate-bloom'),
+          array($this, 'render_shortlink_base_url_field'),
           'affiliate-bloom-settings',
           'affiliate_bloom_referral_settings'
       );
@@ -98,6 +114,22 @@ class AdminApplications {
       />
       <p class="description">
           <?php _e('Base URL used for referral links. Leave blank to use the site URL.', 'affiliate-bloom'); ?>
+      </p>
+      <?php
+  }
+
+  public function render_shortlink_base_url_field() {
+      $value = get_option('affiliate_bloom_shortlink_base_url', '');
+      ?>
+      <input
+          type="url"
+          class="regular-text"
+          name="affiliate_bloom_shortlink_base_url"
+          value="<?php echo esc_attr($value); ?>"
+          placeholder="https://ek.sey/"
+      />
+      <p class="description">
+          <?php _e('Base URL used for short affiliate links (e.g., https://ek.sey). Leave blank to use the site URL.', 'affiliate-bloom'); ?>
       </p>
       <?php
   }

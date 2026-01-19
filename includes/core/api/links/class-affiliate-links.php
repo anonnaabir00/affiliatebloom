@@ -300,7 +300,8 @@ class AffiliateLinksAPI {
 
         // Generate unique link code
         $link_code = $this->generate_unique_link_code($user_id);
-        $affiliate_url = home_url('/go/' . $link_code);
+        $base_url = AffiliateHelper::get_shortlink_base_url();
+        $affiliate_url = rtrim($base_url, '/') . '/go/' . $link_code;
 
         // Generate link name if not provided
         if (empty($link_name)) {

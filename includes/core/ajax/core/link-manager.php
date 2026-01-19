@@ -395,8 +395,11 @@ class LinkManager {
      * Generate affiliate URL - creates a redirect URL instead of appending parameters
      */
     private function generate_affiliate_url( $original_url, $link_code ) {
-        // Create a redirect URL like: yoursite.com/go/ABC123_xyz789_linkID
-        return home_url( '/go/' . $link_code );
+        $base_url = AffiliateHelper::get_shortlink_base_url();
+        $base_url = rtrim( $base_url, '/' );
+
+        // Create a redirect URL like: https://short.domain/go/ABC123_xyz789
+        return $base_url . '/go/' . $link_code;
     }
 
     /**
