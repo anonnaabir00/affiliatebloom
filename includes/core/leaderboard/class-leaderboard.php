@@ -106,6 +106,7 @@ class Leaderboard {
      *     @type string $order        Order direction: 'ASC' or 'DESC'. Default 'DESC'.
      *     @type string $start_date   Filter orders from this date (YYYY-MM-DD).
      *     @type string $end_date     Filter orders up to this date (YYYY-MM-DD).
+     *     @type int    $sponsor_id   Filter affiliates by sponsor (direct referrals only).
      * }
      * @return array Leaderboard data with rankings.
      */
@@ -118,13 +119,14 @@ class Leaderboard {
             'order_by'   => 'team_purchased_value',
             'order'      => 'DESC',
             'start_date' => '',
-            'end_date'   => ''
+            'end_date'   => '',
+            'sponsor_id' => 0
         );
 
         $args = wp_parse_args( $args, $defaults );
 
         // Get all approved affiliates
-        $affiliates = $this->get_filtered_affiliates( $args['division'], $args['zilla'] );
+        $affiliates = $this->get_filtered_affiliates( $args['division'], $args['zilla'], $args['sponsor_id'] );
 
         if ( empty( $affiliates ) ) {
             return array(
@@ -219,7 +221,21 @@ class Leaderboard {
     /**
      * Get filtered affiliates based on division and zilla
      */
-    private function get_filtered_affiliates( $division = '', $zilla = '' ) {
+    private function get_filtered_affiliates( $division = '', $zilla = '', $sponsor_id = 0 ) {
+        global $wpdb;
+
+        $include_ids = array();
+        if ( ! empty( $sponsor_id ) ) {
+            $include_ids = $wpdb->get_col( $wpdb->prepare(
+                "SELECT user_id FROM {$wpdb->prefix}affiliate_bloom_hierarchy WHERE sponsor_id = %d",
+                $sponsor_id
+            ) );
+
+            if ( empty( $include_ids ) ) {
+                return array();
+            }
+        }
+
         $meta_query = array(
             'relation' => 'AND',
             array(
@@ -252,6 +268,10 @@ class Leaderboard {
             'meta_query' => $meta_query,
             'fields'     => 'all'
         );
+
+        if ( ! empty( $include_ids ) ) {
+            $args['include'] = $include_ids;
+        }
 
         $user_query = new \WP_User_Query( $args );
 

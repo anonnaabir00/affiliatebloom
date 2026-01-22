@@ -26,7 +26,7 @@ class LeaderboardAPI {
         register_rest_route( $this->namespace, '/leaderboard', array(
             'methods'             => 'GET',
             'callback'            => array( $this, 'get_leaderboard' ),
-            'permission_callback' => '__return_true',
+            'permission_callback' => array( $this, 'check_permission' ),
             'args'                => array(
                 'division' => array(
                     'required'          => false,
@@ -156,6 +156,16 @@ class LeaderboardAPI {
      * Get leaderboard rankings
      */
     public function get_leaderboard( $request ) {
+        $user_id = $this->get_current_user_from_token( $request );
+
+        if ( ! $user_id ) {
+            return new \WP_Error(
+                'invalid_user',
+                __( 'Could not identify user.', 'affiliate-bloom' ),
+                array( 'status' => 401 )
+            );
+        }
+
         $leaderboard = Leaderboard::init();
 
         $args = array(
@@ -166,7 +176,8 @@ class LeaderboardAPI {
             'order_by'   => $request->get_param( 'order_by' ) ?: 'team_purchased_value',
             'order'      => $request->get_param( 'order' ) ?: 'DESC',
             'start_date' => $request->get_param( 'start_date' ) ?: '',
-            'end_date'   => $request->get_param( 'end_date' ) ?: ''
+            'end_date'   => $request->get_param( 'end_date' ) ?: '',
+            'sponsor_id' => $user_id
         );
 
         $data = $leaderboard->get_leaderboard( $args );
