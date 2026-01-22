@@ -159,6 +159,9 @@ class PartnerRegister {
             // Link application to user
             update_user_meta($user_id, 'affiliate_application_id', $application_id);
 
+            // Add welcome/login bonus for new registration
+            $welcome_bonus_data = $this->add_welcome_bonus($user_id);
+
             // Send notification emails
             $this->send_registration_emails( $user_id, $user_data, $application_data, $application_id );
 
@@ -169,7 +172,8 @@ class PartnerRegister {
             wp_send_json_success( array(
                 'message' => __('Registration successful! Your affiliate account has been approved. You can start promoting products immediately.', 'affiliate-bloom'),
                 'redirect_url' => home_url(),
-                'application_id' => $application_id
+                'application_id' => $application_id,
+                'welcome_bonus' => $welcome_bonus_data
             ));
         } else {
             wp_send_json_error( array(
@@ -422,5 +426,57 @@ The Affiliate Team', 'affiliate-bloom'),
         if ($subject && $message) {
             wp_mail($user->user_email, $subject, $message);
         }
+    }
+
+    /**
+     * Add welcome bonus for new user registration
+     */
+    private function add_welcome_bonus($user_id) {
+        $bonus_amount = 5.00; // Same as login bonus
+        $today = date('Y-m-d');
+
+        // Initialize balance with welcome bonus
+        update_user_meta($user_id, 'affiliate_balance', $bonus_amount);
+        update_user_meta($user_id, 'last_login_bonus_date', $today);
+
+        // Log transaction as login_bonus (first day login bonus)
+        $transaction_id = $this->log_bonus_transaction($user_id, $bonus_amount, 'login_bonus', 'Daily login bonus');
+
+        // Fire action for extensibility
+        do_action('affiliate_bloom_login_bonus_added', $user_id, $bonus_amount, $transaction_id);
+
+        return array(
+            'awarded'        => true,
+            'message'        => 'Welcome bonus awarded!',
+            'amount'         => $bonus_amount,
+            'new_balance'    => $bonus_amount,
+            'transaction_id' => $transaction_id,
+        );
+    }
+
+    /**
+     * Log bonus transaction to user's transaction history
+     */
+    private function log_bonus_transaction($user_id, $amount, $type, $description) {
+        $transaction_history = get_user_meta($user_id, 'affiliate_transaction_history', true);
+        if (!is_array($transaction_history)) {
+            $transaction_history = array();
+        }
+
+        $transaction = array(
+            'id'           => uniqid('txn_'),
+            'type'         => $type,
+            'amount'       => $amount,
+            'status'       => 'completed',
+            'description'  => $description,
+            'created_date' => current_time('mysql'),
+            'date'         => date('Y-m-d'),
+            'timestamp'    => current_time('timestamp'),
+        );
+
+        $transaction_history[] = $transaction;
+        update_user_meta($user_id, 'affiliate_transaction_history', $transaction_history);
+
+        return $transaction['id'];
     }
 }

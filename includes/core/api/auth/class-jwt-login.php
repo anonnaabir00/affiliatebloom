@@ -88,6 +88,9 @@ class JWTLogin {
         $token = $this->jwt_auth->generate_token($user);
         $refresh_token = $this->jwt_auth->generate_refresh_token($user);
 
+        // Process login bonus for API-based logins
+        $login_bonus_data = $this->process_login_bonus($user->ID);
+
         return new \WP_REST_Response([
             'success' => true,
             'message' => 'Login successful!',
@@ -104,7 +107,74 @@ class JWTLogin {
                     'phone'        => get_user_meta($user->ID, 'phone_number', true),
                     'zilla'        => get_user_meta($user->ID, 'zilla', true),
                 ],
+                'login_bonus'   => $login_bonus_data,
             ],
         ], 200);
+    }
+
+    /**
+     * Process login bonus for API-based logins
+     */
+    private function process_login_bonus($user_id) {
+        $bonus_amount = 5.00;
+        $today = date('Y-m-d');
+        $last_bonus_date = get_user_meta($user_id, 'last_login_bonus_date', true);
+
+        // If user already got bonus today, return status without adding
+        if ($last_bonus_date === $today) {
+            return [
+                'awarded' => false,
+                'message' => 'Login bonus already claimed today',
+                'amount'  => 0,
+            ];
+        }
+
+        // Add login bonus
+        $current_balance = get_user_meta($user_id, 'affiliate_balance', true);
+        $current_balance = $current_balance ? floatval($current_balance) : 0;
+        $new_balance = $current_balance + $bonus_amount;
+
+        update_user_meta($user_id, 'affiliate_balance', $new_balance);
+        update_user_meta($user_id, 'last_login_bonus_date', $today);
+
+        // Log transaction
+        $transaction_id = $this->log_bonus_transaction($user_id, $bonus_amount, 'login_bonus', 'Daily login bonus');
+
+        // Fire action for extensibility
+        do_action('affiliate_bloom_login_bonus_added', $user_id, $bonus_amount, $transaction_id);
+
+        return [
+            'awarded'        => true,
+            'message'        => 'Login bonus awarded!',
+            'amount'         => $bonus_amount,
+            'new_balance'    => $new_balance,
+            'transaction_id' => $transaction_id,
+        ];
+    }
+
+    /**
+     * Log bonus transaction to user's transaction history
+     */
+    private function log_bonus_transaction($user_id, $amount, $type, $description) {
+        $transaction_history = get_user_meta($user_id, 'affiliate_transaction_history', true);
+        if (!is_array($transaction_history)) {
+            $transaction_history = [];
+        }
+
+        $transaction = [
+            'id'           => uniqid('txn_'),
+            'type'         => $type,
+            'amount'       => $amount,
+            'status'       => 'completed',
+            'description'  => $description,
+            'created_date' => current_time('mysql'),
+            'date'         => date('Y-m-d'),
+            'timestamp'    => current_time('timestamp'),
+        ];
+
+        $transaction_history[] = $transaction;
+        update_user_meta($user_id, 'affiliate_transaction_history', $transaction_history);
+
+        return $transaction['id'];
     }
 }

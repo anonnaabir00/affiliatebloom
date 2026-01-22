@@ -119,6 +119,9 @@ class JWTRegister {
             $this->process_referral($user_id, $referral_id);
         }
 
+        // Add welcome/login bonus for new registration
+        $welcome_bonus_data = $this->add_welcome_bonus($user_id);
+
         // Get the created user
         $user = get_user_by('id', $user_id);
 
@@ -142,6 +145,7 @@ class JWTRegister {
                     'zilla'        => $zilla,
                     'affiliate_id' => $affiliate_code,
                 ],
+                'welcome_bonus' => $welcome_bonus_data,
             ],
         ], 201);
     }
@@ -234,5 +238,57 @@ class JWTRegister {
         ]);
 
         return !empty($users) ? $users[0] : false;
+    }
+
+    /**
+     * Add welcome bonus for new user registration
+     */
+    private function add_welcome_bonus($user_id) {
+        $bonus_amount = 5.00; // Same as login bonus
+        $today = date('Y-m-d');
+
+        // Initialize balance with welcome bonus
+        update_user_meta($user_id, 'affiliate_balance', $bonus_amount);
+        update_user_meta($user_id, 'last_login_bonus_date', $today);
+
+        // Log transaction as login_bonus (first day login bonus)
+        $transaction_id = $this->log_bonus_transaction($user_id, $bonus_amount, 'login_bonus', 'Daily login bonus');
+
+        // Fire action for extensibility
+        do_action('affiliate_bloom_login_bonus_added', $user_id, $bonus_amount, $transaction_id);
+
+        return [
+            'awarded'        => true,
+            'message'        => 'Welcome bonus awarded!',
+            'amount'         => $bonus_amount,
+            'new_balance'    => $bonus_amount,
+            'transaction_id' => $transaction_id,
+        ];
+    }
+
+    /**
+     * Log bonus transaction to user's transaction history
+     */
+    private function log_bonus_transaction($user_id, $amount, $type, $description) {
+        $transaction_history = get_user_meta($user_id, 'affiliate_transaction_history', true);
+        if (!is_array($transaction_history)) {
+            $transaction_history = [];
+        }
+
+        $transaction = [
+            'id'           => uniqid('txn_'),
+            'type'         => $type,
+            'amount'       => $amount,
+            'status'       => 'completed',
+            'description'  => $description,
+            'created_date' => current_time('mysql'),
+            'date'         => date('Y-m-d'),
+            'timestamp'    => current_time('timestamp'),
+        ];
+
+        $transaction_history[] = $transaction;
+        update_user_meta($user_id, 'affiliate_transaction_history', $transaction_history);
+
+        return $transaction['id'];
     }
 }
